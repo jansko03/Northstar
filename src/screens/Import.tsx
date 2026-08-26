@@ -1,8 +1,29 @@
 import { useMemo, useRef, useState } from 'react'
 import Papa from 'papaparse'
 import { DEFAULT_USER_ID, supabase } from '../lib/supabase'
-import { color, font, label, radius } from '../lib/tokens'
-import type { SignalKind } from '../lib/types'
+import { color, font, label, radius, stageLabel } from '../lib/tokens'
+import type { ContactType, SignalKind, Stage } from '../lib/types'
+
+const contactTypes: ContactType[] = ['client', 'partner', 'channel', 'peer', 'unknown']
+const stages: Stage[] = ['silent', 'warming', 'contacted', 'conversation', 'dormant']
+
+interface ManualForm {
+  name: string
+  linkedin_url: string
+  role_title: string
+  company: string
+  contact_type: ContactType
+  stage: Stage
+}
+
+const emptyManualForm: ManualForm = {
+  name: '',
+  linkedin_url: '',
+  role_title: '',
+  company: '',
+  contact_type: 'unknown',
+  stage: 'silent',
+}
 
 type ImportField = 'name' | 'linkedin_url' | 'role_title' | 'company' | 'engagement_type' | 'date'
 
@@ -129,6 +150,46 @@ export function Import() {
   const [parseError, setParseError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [showManualForm, setShowManualForm] = useState(false)
+  const [manualForm, setManualForm] = useState<ManualForm>(emptyManualForm)
+  const [manualSaving, setManualSaving] = useState(false)
+  const [manualMessage, setManualMessage] = useState<{ text: string; isError: boolean } | null>(null)
+
+  async function handleManualAdd() {
+    const name = manualForm.name.trim()
+    if (!name) {
+      setManualMessage({ text: 'Name is required.', isError: true })
+      return
+    }
+    setManualSaving(true)
+    setManualMessage(null)
+
+    const linkedin_url = manualForm.linkedin_url.trim() || null
+    const payload = {
+      user_id: DEFAULT_USER_ID,
+      name,
+      role_title: manualForm.role_title.trim() || null,
+      company: manualForm.company.trim() || null,
+      linkedin_url,
+      contact_type: manualForm.contact_type,
+      stage: manualForm.stage,
+    }
+
+    const query = linkedin_url
+      ? supabase.from('contact').upsert(payload, { onConflict: 'user_id,linkedin_url' })
+      : supabase.from('contact').insert(payload)
+    const { error } = await query
+
+    setManualSaving(false)
+    if (error) {
+      setManualMessage({ text: error.message, isError: true })
+      return
+    }
+    setManualMessage({ text: `${name} added.`, isError: false })
+    setManualForm(emptyManualForm)
+    if (linkedin_url) setExistingUrls((prev) => new Set(prev).add(linkedin_url))
+  }
+
   const hasFile = headers.length > 0
 
   function handleFile(file: File) {
@@ -247,6 +308,108 @@ export function Import() {
 
   return (
     <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 920 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: showManualForm ? 16 : 0 }}>
+        <button
+          type="button"
+          onClick={() => {
+            setShowManualForm((v) => !v)
+            setManualMessage(null)
+          }}
+          style={{ ...label, background: 'none', border: 'none', color: color.muted, cursor: 'pointer', textAlign: 'left', padding: 0 }}
+        >
+          {showManualForm ? '− Hide manual entry' : '+ Add a contact manually'}
+        </button>
+
+        {showManualForm && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+              padding: 20,
+              background: color.surface,
+              border: `1px solid ${color.border}`,
+              borderRadius: radius.lg,
+            }}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+              <Field label="Name *">
+                <input
+                  value={manualForm.name}
+                  onChange={(e) => setManualForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Jane Doe"
+                  style={selectStyle}
+                />
+              </Field>
+              <Field label="LinkedIn URL">
+                <input
+                  value={manualForm.linkedin_url}
+                  onChange={(e) => setManualForm((f) => ({ ...f, linkedin_url: e.target.value }))}
+                  placeholder="https://linkedin.com/in/..."
+                  style={selectStyle}
+                />
+              </Field>
+              <Field label="Role title">
+                <input
+                  value={manualForm.role_title}
+                  onChange={(e) => setManualForm((f) => ({ ...f, role_title: e.target.value }))}
+                  style={selectStyle}
+                />
+              </Field>
+              <Field label="Company">
+                <input
+                  value={manualForm.company}
+                  onChange={(e) => setManualForm((f) => ({ ...f, company: e.target.value }))}
+                  style={selectStyle}
+                />
+              </Field>
+              <Field label="Contact type">
+                <select
+                  value={manualForm.contact_type}
+                  onChange={(e) => setManualForm((f) => ({ ...f, contact_type: e.target.value as ContactType }))}
+                  style={selectStyle}
+                >
+                  {contactTypes.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Stage">
+                <select
+                  value={manualForm.stage}
+                  onChange={(e) => setManualForm((f) => ({ ...f, stage: e.target.value as Stage }))}
+                  style={selectStyle}
+                >
+                  {stages.map((s) => (
+                    <option key={s} value={s}>
+                      {stageLabel[s]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <button
+                type="button"
+                onClick={handleManualAdd}
+                disabled={manualSaving}
+                style={primaryButtonStyle(!manualSaving)}
+              >
+                {manualSaving ? 'Adding…' : 'Add contact'}
+              </button>
+              {manualMessage && (
+                <span style={{ ...label, color: manualMessage.isError ? color.lime : color.accent }}>
+                  {manualMessage.text}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {!hasFile && (
         <div
           onDragOver={(e) => {
@@ -397,6 +560,15 @@ export function Import() {
           )}
         </>
       )}
+    </div>
+  )
+}
+
+function Field({ label: fieldLabel, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span style={{ ...label, color: color.dim, fontSize: 10 }}>{fieldLabel}</span>
+      {children}
     </div>
   )
 }
