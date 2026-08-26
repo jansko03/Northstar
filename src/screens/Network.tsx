@@ -1,17 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { initials } from '../lib/format'
 import { useContactsWithScore } from '../lib/useContactsWithScore'
 import { color, font, label, radius, stageColor, stageLabel, tierLabel } from '../lib/tokens'
 import type { ContactWithScore, Stage } from '../lib/types'
 
 const stages: Stage[] = ['silent', 'warming', 'contacted', 'conversation', 'dormant']
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  const first = parts[0]?.[0] ?? ''
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : ''
-  return (first + last).toUpperCase()
-}
 
 function ContactCard({ contact }: { contact: ContactWithScore }) {
   const subtitle = [contact.role_title, contact.company].filter(Boolean).join(' · ')
@@ -19,6 +13,7 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
   return (
     <Link
       to={`/contact/${contact.id}`}
+      className="ns-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -70,6 +65,19 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
             </div>
           )}
         </div>
+        {(contact.score?.open_events ?? 0) > 0 && (
+          <span
+            className="ns-pulse-dot"
+            style={{
+              marginLeft: 'auto',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: color.accent,
+              flexShrink: 0,
+            }}
+          />
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

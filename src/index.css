@@ -31,3 +31,24 @@ button {
 button {
   font-family: inherit;
 }
+
+@keyframes ns-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(79, 227, 155, 0.45); }
+  70% { box-shadow: 0 0 0 8px rgba(79, 227, 155, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(79, 227, 155, 0); }
+}
+
+.ns-card {
+  transition: transform .16s cubic-bezier(.2,.7,.3,1), border-color .16s, background .16s, box-shadow .16s;
+}
+
+.ns-card:hover {
+  background: rgba(255, 255, 255, .055);
+  border-color: rgba(79, 227, 155, .3);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px -22px rgba(0, 0, 0, 1);
+}
+
+.ns-pulse-dot {
+  animation: ns-pulse 2.4s infinite;
+}

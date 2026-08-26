@@ -12,6 +12,11 @@ export const color = {
   lime: '#D8F26A',
 } as const
 
+// A slightly richer surface treatment (gradient + inset highlight + drop shadow)
+// for cards that carry more content, e.g. contact detail panels.
+export const surfaceGradient = 'linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.014))'
+export const cardShadow = '0 1px 0 rgba(255,255,255,.04) inset, 0 14px 34px -20px rgba(0,0,0,.95)'
+
 export const radius = {
   sm: 14,
   lg: 18,
@@ -50,4 +55,11 @@ export const tierLabel: Record<Tier, string> = {
   keep_warm: 'Keep warm',
   nurture: 'Nurture',
   parked: 'Parked',
+}
+
+export const tierColor: Record<Tier, string> = {
+  act_now: color.accent,
+  keep_warm: color.lime,
+  nurture: color.muted,
+  parked: color.dim,
 }
