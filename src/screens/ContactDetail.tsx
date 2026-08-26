@@ -32,6 +32,8 @@ export function ContactDetail() {
   const [notFound, setNotFound] = useState(false)
   const [noteDraft, setNoteDraft] = useState('')
   const [savingNote, setSavingNote] = useState(false)
+  const [eventDraft, setEventDraft] = useState('')
+  const [savingEvent, setSavingEvent] = useState(false)
 
   async function load() {
     if (!id) return
@@ -84,6 +86,17 @@ export function ContactDetail() {
     setSavingNote(false)
   }
 
+  async function addEvent() {
+    if (!contact) return
+    const body = eventDraft.trim()
+    if (!body) return
+    setSavingEvent(true)
+    setEventDraft('')
+    await supabase.from('note').insert({ contact_id: contact.id, body, channel: 'meeting' })
+    await load()
+    setSavingEvent(false)
+  }
+
   if (loading) {
     return (
       <div style={{ padding: 32 }}>
@@ -109,6 +122,8 @@ export function ContactDetail() {
   const reactions = signals.filter((s) => s.kind === 'reaction').length
   const comments = signals.filter((s) => s.kind === 'comment').length
   const currentPipelineIndex = pipeline.indexOf(contact.stage)
+  const privateNotes = notes.filter((n) => n.channel === 'note')
+  const events = notes.filter((n) => n.channel === 'meeting')
 
   return (
     <div style={{ padding: 32, display: 'flex', gap: 20, alignItems: 'flex-start' }}>
@@ -326,7 +341,7 @@ export function ContactDetail() {
 
         <Section title="Private notes">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {notes.map((n) => (
+            {privateNotes.map((n) => (
               <div key={n.id} style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 12, borderLeft: `1px solid ${color.border}` }}>
                 <span style={{ ...label, color: color.dim, fontSize: 10 }}>
                   {new Date(n.created_at).toLocaleDateString()}
@@ -334,7 +349,7 @@ export function ContactDetail() {
                 <span style={{ fontSize: 13, color: color.muted, lineHeight: 1.5 }}>{n.body}</span>
               </div>
             ))}
-            {notes.length === 0 && <span style={{ fontSize: 13, color: color.dim }}>No notes yet.</span>}
+            {privateNotes.length === 0 && <span style={{ fontSize: 13, color: color.dim }}>No notes yet.</span>}
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <input
                 value={noteDraft}
@@ -369,6 +384,68 @@ export function ContactDetail() {
                 }}
               >
                 Add note
+              </button>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Events & meetings">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {events.map((e) => (
+              <div key={e.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    marginTop: 5,
+                    borderRadius: '50%',
+                    background: color.accent,
+                    flexShrink: 0,
+                  }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: color.text }}>{e.body}</span>
+                  <span style={{ ...label, color: color.dim, fontSize: 10 }}>
+                    {new Date(e.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {events.length === 0 && <span style={{ fontSize: 13, color: color.dim }}>No shared events yet.</span>}
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <input
+                value={eventDraft}
+                onChange={(e) => setEventDraft(e.target.value)}
+                placeholder="Event or meeting, e.g. &quot;Coffee in Bratislava — 12 Jun&quot;"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  background: color.surface,
+                  border: `1px solid ${color.border}`,
+                  borderRadius: radius.sm,
+                  padding: '9px 11px',
+                  color: color.text,
+                  fontFamily: font.body,
+                  fontSize: 12.5,
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="button"
+                onClick={addEvent}
+                disabled={savingEvent || !eventDraft.trim()}
+                style={{
+                  ...label,
+                  padding: '9px 14px',
+                  background: 'rgba(79,227,155,.11)',
+                  border: `1px solid rgba(79,227,155,.34)`,
+                  borderRadius: radius.sm,
+                  color: color.accent,
+                  cursor: savingEvent ? 'default' : 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Add
               </button>
             </div>
           </div>
