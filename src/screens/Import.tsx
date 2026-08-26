@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Papa from 'papaparse'
 import { DEFAULT_USER_ID, supabase } from '../lib/supabase'
 import { color, font, label, radius, stageLabel } from '../lib/tokens'
@@ -150,7 +150,7 @@ export function Import() {
   const [parseError, setParseError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [showManualForm, setShowManualForm] = useState(false)
+  const [showCsvImport, setShowCsvImport] = useState(false)
   const [manualForm, setManualForm] = useState<ManualForm>(emptyManualForm)
   const [manualSaving, setManualSaving] = useState(false)
   const [manualMessage, setManualMessage] = useState<{ text: string; isError: boolean } | null>(null)
@@ -308,109 +308,104 @@ export function Import() {
 
   return (
     <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 920 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: showManualForm ? 16 : 0 }}>
-        <button
-          type="button"
-          onClick={() => {
-            setShowManualForm((v) => !v)
-            setManualMessage(null)
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <span style={{ ...label, color: color.muted }}>Add a contact</span>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 14,
+            padding: 20,
+            background: color.surface,
+            border: `1px solid ${color.border}`,
+            borderRadius: radius.lg,
           }}
-          style={{ ...label, background: 'none', border: 'none', color: color.muted, cursor: 'pointer', textAlign: 'left', padding: 0 }}
         >
-          {showManualForm ? '− Hide manual entry' : '+ Add a contact manually'}
-        </button>
-
-        {showManualForm && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 14,
-              padding: 20,
-              background: color.surface,
-              border: `1px solid ${color.border}`,
-              borderRadius: radius.lg,
-            }}
-          >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-              <Field label="Name *">
-                <input
-                  value={manualForm.name}
-                  onChange={(e) => setManualForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Jane Doe"
-                  style={selectStyle}
-                />
-              </Field>
-              <Field label="LinkedIn URL">
-                <input
-                  value={manualForm.linkedin_url}
-                  onChange={(e) => setManualForm((f) => ({ ...f, linkedin_url: e.target.value }))}
-                  placeholder="https://linkedin.com/in/..."
-                  style={selectStyle}
-                />
-              </Field>
-              <Field label="Role title">
-                <input
-                  value={manualForm.role_title}
-                  onChange={(e) => setManualForm((f) => ({ ...f, role_title: e.target.value }))}
-                  style={selectStyle}
-                />
-              </Field>
-              <Field label="Company">
-                <input
-                  value={manualForm.company}
-                  onChange={(e) => setManualForm((f) => ({ ...f, company: e.target.value }))}
-                  style={selectStyle}
-                />
-              </Field>
-              <Field label="Contact type">
-                <select
-                  value={manualForm.contact_type}
-                  onChange={(e) => setManualForm((f) => ({ ...f, contact_type: e.target.value as ContactType }))}
-                  style={selectStyle}
-                >
-                  {contactTypes.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Stage">
-                <select
-                  value={manualForm.stage}
-                  onChange={(e) => setManualForm((f) => ({ ...f, stage: e.target.value as Stage }))}
-                  style={selectStyle}
-                >
-                  {stages.map((s) => (
-                    <option key={s} value={s}>
-                      {stageLabel[s]}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <button
-                type="button"
-                onClick={handleManualAdd}
-                disabled={manualSaving}
-                style={primaryButtonStyle(!manualSaving)}
-              >
-                {manualSaving ? 'Adding…' : 'Add contact'}
-              </button>
-              {manualMessage && (
-                <span style={{ ...label, color: manualMessage.isError ? color.lime : color.accent }}>
-                  {manualMessage.text}
-                </span>
-              )}
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            <Field label="Name *">
+              <input
+                value={manualForm.name}
+                onChange={(e) => setManualForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Jane Doe"
+                style={selectStyle}
+              />
+            </Field>
+            <Field label="LinkedIn URL">
+              <input
+                value={manualForm.linkedin_url}
+                onChange={(e) => setManualForm((f) => ({ ...f, linkedin_url: e.target.value }))}
+                placeholder="https://linkedin.com/in/..."
+                style={selectStyle}
+              />
+            </Field>
+            <Field label="Role title">
+              <input
+                value={manualForm.role_title}
+                onChange={(e) => setManualForm((f) => ({ ...f, role_title: e.target.value }))}
+                style={selectStyle}
+              />
+            </Field>
+            <Field label="Company">
+              <input
+                value={manualForm.company}
+                onChange={(e) => setManualForm((f) => ({ ...f, company: e.target.value }))}
+                style={selectStyle}
+              />
+            </Field>
+            <Field label="Contact type">
+              <Dropdown
+                value={manualForm.contact_type}
+                onChange={(v) => setManualForm((f) => ({ ...f, contact_type: v as ContactType }))}
+                options={contactTypes.map((t) => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+              />
+            </Field>
+            <Field label="Stage">
+              <Dropdown
+                value={manualForm.stage}
+                onChange={(v) => setManualForm((f) => ({ ...f, stage: v as Stage }))}
+                options={stages.map((s) => ({ value: s, label: stageLabel[s] }))}
+              />
+            </Field>
           </div>
-        )}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button
+              type="button"
+              onClick={handleManualAdd}
+              disabled={manualSaving}
+              style={primaryButtonStyle(!manualSaving)}
+            >
+              {manualSaving ? 'Adding…' : 'Add contact'}
+            </button>
+            {manualMessage && (
+              <span style={{ ...label, color: manualMessage.isError ? color.lime : color.accent }}>
+                {manualMessage.text}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {!hasFile && (
+        <div style={{ borderTop: `1px solid ${color.border}`, paddingTop: 20 }}>
+          <button
+            type="button"
+            onClick={() => setShowCsvImport((v) => !v)}
+            style={{ ...label, background: 'none', border: 'none', color: color.muted, cursor: 'pointer', textAlign: 'left', padding: 0 }}
+          >
+            {showCsvImport ? '− Hide CSV import' : '+ Import from a CSV file instead'}
+          </button>
+        </div>
+      )}
+
+      {showCsvImport && !hasFile && (
+        <div style={{ ...label, color: color.muted, lineHeight: 1.7 }}>
+          Expected columns (header names can vary — they're matched automatically): Name, LinkedIn URL, Role
+          title, Company, Engagement type (e.g. Like / Comment), Date. Only Name and LinkedIn URL are required.
+        </div>
+      )}
+
+      {showCsvImport && !hasFile && (
         <div
           onDragOver={(e) => {
             e.preventDefault()
@@ -485,26 +480,13 @@ export function Import() {
             <span style={{ ...label, color: color.muted }}>Map columns</span>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
               {importFields.map(({ field, label: fieldLabel, required }) => (
-                <div key={field} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ ...label, color: color.dim, fontSize: 10 }}>
-                    {fieldLabel}
-                    {required ? ' *' : ''}
-                  </span>
-                  <select
+                <Field key={field} label={fieldLabel + (required ? ' *' : '')}>
+                  <Dropdown
                     value={mapping[field] ?? ''}
-                    onChange={(e) =>
-                      setMapping((m) => ({ ...m, [field]: e.target.value || undefined }))
-                    }
-                    style={selectStyle}
-                  >
-                    <option value="">— none —</option>
-                    {headers.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    onChange={(v) => setMapping((m) => ({ ...m, [field]: v || undefined }))}
+                    options={[{ value: '', label: '— none —' }, ...headers.map((h) => ({ value: h, label: h }))]}
+                  />
+                </Field>
               ))}
             </div>
           </div>
@@ -569,6 +551,123 @@ function Field({ label: fieldLabel, children }: { label: string; children: React
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <span style={{ ...label, color: color.dim, fontSize: 10 }}>{fieldLabel}</span>
       {children}
+    </div>
+  )
+}
+
+interface DropdownOption {
+  value: string
+  label: string
+}
+
+function Dropdown({
+  value,
+  onChange,
+  options,
+  placeholder = 'Select…',
+}: {
+  value: string
+  onChange: (value: string) => void
+  options: DropdownOption[]
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [hovered, setHovered] = useState<string | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  const selected = options.find((o) => o.value === value)
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          ...selectStyle,
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          cursor: 'pointer',
+          borderColor: open ? color.accent : color.border,
+        }}
+      >
+        <span style={{ color: selected ? color.text : color.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <svg
+          width="10"
+          height="6"
+          viewBox="0 0 10 6"
+          fill="none"
+          style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .1s' }}
+        >
+          <path d="M1 1L5 5L9 1" stroke={color.muted} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            left: 0,
+            right: 0,
+            zIndex: 30,
+            background: '#0e100e',
+            border: `1px solid ${color.border}`,
+            borderRadius: radius.sm,
+            padding: 4,
+            maxHeight: 240,
+            overflowY: 'auto',
+            boxShadow: '0 12px 28px rgba(0,0,0,.5)',
+          }}
+        >
+          {options.map((o) => {
+            const isSelected = o.value === value
+            const isHovered = hovered === o.value
+            return (
+              <div
+                key={o.value}
+                onMouseEnter={() => setHovered(o.value)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => {
+                  onChange(o.value)
+                  setOpen(false)
+                }}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: radius.sm - 4,
+                  cursor: 'pointer',
+                  fontFamily: font.body,
+                  fontSize: 13,
+                  color: isSelected ? color.accent : color.text,
+                  background: isSelected ? 'rgba(79,227,155,.1)' : isHovered ? 'rgba(255,255,255,.05)' : 'transparent',
+                }}
+              >
+                {o.label}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
