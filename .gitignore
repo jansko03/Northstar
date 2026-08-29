@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+# Intentionally tracked despite the *.local pattern above — see .env.local
+# for why the Supabase credentials in it are committed on purpose.
+!.env.local
 
 # Editor directories and files
 .vscode/*
