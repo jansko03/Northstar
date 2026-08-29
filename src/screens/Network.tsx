@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { NetworkMap } from '../components/NetworkMap'
 import { initials } from '../lib/format'
 import { useContactsWithScore } from '../lib/useContactsWithScore'
 import { color, font, label, radius, stageColor, stageLabel, tierLabel } from '../lib/tokens'
 import type { ContactWithScore, Stage } from '../lib/types'
+
+type View = 'cards' | 'map'
 
 const stages: Stage[] = ['silent', 'warming', 'contacted', 'conversation', 'dormant']
 
@@ -110,6 +113,7 @@ export function Network() {
   const { contacts, loading, error } = useContactsWithScore()
   const [stageFilter, setStageFilter] = useState<Stage | 'all'>('all')
   const [search, setSearch] = useState('')
+  const [view, setView] = useState<View>('cards')
 
   const counts = useMemo(() => {
     const c: Record<Stage | 'all', number> = {
@@ -153,22 +157,25 @@ export function Network() {
             />
           ))}
         </div>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name or company"
-          style={{
-            background: color.surface,
-            border: `1px solid ${color.border}`,
-            borderRadius: radius.sm,
-            padding: '10px 14px',
-            color: color.text,
-            fontFamily: font.body,
-            fontSize: 13,
-            minWidth: 220,
-            outline: 'none',
-          }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name or company"
+            style={{
+              background: color.surface,
+              border: `1px solid ${color.border}`,
+              borderRadius: radius.sm,
+              padding: '10px 14px',
+              color: color.text,
+              fontFamily: font.body,
+              fontSize: 13,
+              minWidth: 220,
+              outline: 'none',
+            }}
+          />
+          <ViewToggle view={view} onChange={setView} />
+        </div>
       </div>
 
       {loading && <div style={{ ...label, color: color.muted }}>Loading…</div>}
@@ -181,17 +188,55 @@ export function Network() {
         <div style={{ ...label, color: color.muted }}>No contacts match.</div>
       )}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(272px, 1fr))',
-          gap: 14,
-        }}
-      >
-        {filtered.map((c) => (
-          <ContactCard key={c.id} contact={c} />
-        ))}
-      </div>
+      {view === 'cards' ? (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(272px, 1fr))',
+            gap: 14,
+          }}
+        >
+          {filtered.map((c) => (
+            <ContactCard key={c.id} contact={c} />
+          ))}
+        </div>
+      ) : (
+        <NetworkMap contacts={filtered} />
+      )}
+    </div>
+  )
+}
+
+function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 4,
+        padding: 4,
+        background: color.surface,
+        border: `1px solid ${color.border}`,
+        borderRadius: radius.sm,
+      }}
+    >
+      {(['cards', 'map'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          style={{
+            ...label,
+            padding: '6px 12px',
+            borderRadius: radius.sm - 4,
+            border: 'none',
+            background: view === v ? 'rgba(79,227,155,.13)' : 'transparent',
+            color: view === v ? color.accent : color.muted,
+            cursor: 'pointer',
+          }}
+        >
+          {v === 'cards' ? 'Cards' : 'Map'}
+        </button>
+      ))}
     </div>
   )
 }

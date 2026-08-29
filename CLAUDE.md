@@ -31,7 +31,6 @@ Stages in order: silent → warming → contacted → conversation. dormant is a
 5. /profile   — my own profile + counts
 
 ## What NOT to build until someone pays
-- The network map (keep the prototype as the demo asset)
 - Email sending or drafting with AI
 - Calendar / event sync
 - Automatic enrichment or scraping
