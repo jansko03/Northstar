@@ -50,6 +50,15 @@ export const stageLabel: Record<Stage, string> = {
   dormant: 'Dormant',
 }
 
+// Short hint shown under each stage in the relationship-journey pipeline.
+export const stageHint: Record<Stage, string> = {
+  silent: 'Watching you',
+  warming: 'Engaging often',
+  contacted: 'You reached out',
+  conversation: 'Talking now',
+  dormant: 'Parked',
+}
+
 export const tierLabel: Record<Tier, string> = {
   act_now: 'Act now',
   keep_warm: 'Keep warm',

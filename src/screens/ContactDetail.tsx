@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Section, StatCell } from '../components/Section'
 import { daysAgo, initials } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import {
@@ -9,6 +10,7 @@ import {
   label,
   radius,
   stageColor,
+  stageHint,
   stageLabel,
   surfaceGradient,
   tierColor,
@@ -73,6 +75,12 @@ export function ContactDetail() {
   async function toggleDormant() {
     if (!contact) return
     await moveStage(contact.stage === 'dormant' ? 'contacted' : 'dormant')
+  }
+
+  async function stepBack() {
+    if (!contact) return
+    const idx = pipeline.indexOf(contact.stage)
+    if (idx > 0) await moveStage(pipeline[idx - 1])
   }
 
   async function addNote() {
@@ -263,7 +271,7 @@ export function ContactDetail() {
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Section title="Relationship journey">
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
             {pipeline.map((step, i) => {
               const isCurrent = step === contact.stage
               const isPast = currentPipelineIndex > -1 && i < currentPipelineIndex
@@ -272,6 +280,7 @@ export function ContactDetail() {
                   key={step}
                   type="button"
                   onClick={() => moveStage(step)}
+                  className="ns-stage-btn"
                   style={{
                     flex: 1,
                     display: 'flex',
@@ -285,40 +294,98 @@ export function ContactDetail() {
                     border: `1px solid ${isCurrent ? color.accent : color.border}`,
                   }}
                 >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: '50%',
-                      background: isCurrent || isPast ? stageColor[step] : color.dim,
-                    }}
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: isCurrent || isPast ? stageColor[step] : color.dim,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 2,
+                        borderRadius: 2,
+                        background: isCurrent || isPast ? 'rgba(79,227,155,.28)' : color.border,
+                      }}
+                    />
+                  </div>
                   <span
                     style={{
                       fontSize: 12,
+                      lineHeight: 1.25,
                       fontWeight: isCurrent ? 600 : 400,
                       color: isCurrent ? color.text : isPast ? color.muted : color.dim,
                     }}
                   >
                     {stageLabel[step]}
                   </span>
+                  <span style={{ ...label, fontSize: 9, color: isCurrent ? color.accent : color.dim }}>
+                    {isCurrent ? 'Current' : stageHint[step]}
+                  </span>
                 </button>
               )
             })}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              marginTop: 12,
+              padding: '11px 13px',
+              background: 'rgba(255,255,255,.024)',
+              border: '1px solid rgba(255,255,255,.05)',
+              borderRadius: 10,
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: stageColor[contact.stage],
+                flexShrink: 0,
+              }}
+            />
             <span style={{ fontSize: 12.5, color: color.muted }}>
               Now: <strong style={{ color: color.text }}>{stageLabel[contact.stage]}</strong>
             </span>
             <div style={{ flex: 1 }} />
             <button
               type="button"
+              onClick={stepBack}
+              disabled={currentPipelineIndex <= 0}
+              className="ns-stage-btn"
+              style={{
+                fontFamily: font.body,
+                fontSize: 12,
+                padding: '5px 10px',
+                borderRadius: 8,
+                background: 'none',
+                border: '1px solid rgba(255,255,255,.09)',
+                color: currentPipelineIndex > 0 ? color.muted : color.dim,
+                cursor: currentPipelineIndex > 0 ? 'pointer' : 'default',
+              }}
+            >
+              ← Step back
+            </button>
+            <button
+              type="button"
               onClick={toggleDormant}
               style={{ ...label, background: 'none', border: 'none', color: color.dim, cursor: 'pointer' }}
             >
-              {contact.stage === 'dormant' ? 'Revive from dormant' : 'Mark dormant'}
+              {contact.stage === 'dormant' ? 'Revive from dormant' : 'Park as dormant'}
             </button>
           </div>
+
+          <span style={{ fontSize: 12, lineHeight: 1.5, color: color.dim }}>
+            A later stage pulls them closer to the centre of your map.
+          </span>
         </Section>
 
         <Section title="Signal history">
@@ -455,49 +522,3 @@ export function ContactDetail() {
   )
 }
 
-function StatCell({
-  label: statLabel,
-  value,
-  borderRight,
-  small,
-}: {
-  label: string
-  value: string | number
-  borderRight?: boolean
-  small?: boolean
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 5,
-        padding: '14px 14px',
-        borderRight: borderRight ? `1px solid ${color.border}` : undefined,
-      }}
-    >
-      <span style={{ ...label, color: color.dim, fontSize: 9.5 }}>{statLabel}</span>
-      <span style={{ fontSize: small ? 15 : 16, fontWeight: 600 }}>{value}</span>
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 15,
-        padding: 20,
-        background: surfaceGradient,
-        border: `1px solid ${color.border}`,
-        boxShadow: cardShadow,
-        borderRadius: radius.lg,
-      }}
-    >
-      <span style={{ ...label, color: color.muted }}>{title}</span>
-      {children}
-    </div>
-  )
-}

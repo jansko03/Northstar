@@ -52,3 +52,11 @@ button {
 .ns-pulse-dot {
   animation: ns-pulse 2.4s infinite;
 }
+
+.ns-stage-btn {
+  transition: border-color .16s, background .16s;
+}
+
+.ns-stage-btn:hover {
+  border-color: #4fe39b;
+}

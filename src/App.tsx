@@ -3,6 +3,7 @@ import { NavBar } from './components/NavBar'
 import { ContactDetail } from './screens/ContactDetail'
 import { Import } from './screens/Import'
 import { Network } from './screens/Network'
+import { Profile } from './screens/Profile'
 import { Todo } from './screens/Todo'
 
 function App() {
@@ -15,7 +16,7 @@ function App() {
         <Route path="/import" element={<Import />} />
         <Route path="/pulse" element={<Todo name="Pulse" />} />
         <Route path="/contact/:id" element={<ContactDetail />} />
-        <Route path="/profile" element={<Todo name="Profile" />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   )
