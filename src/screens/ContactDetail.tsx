@@ -143,7 +143,7 @@ export function ContactDetail() {
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
         gap: 20,
-        alignItems: 'flex-start',
+        alignItems: isMobile ? 'stretch' : 'flex-start',
       }}
     >
       <aside
