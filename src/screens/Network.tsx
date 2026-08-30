@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { NetworkMap } from '../components/NetworkMap'
 import { initials } from '../lib/format'
 import { useContactsWithScore } from '../lib/useContactsWithScore'
+import { useIsMobile } from '../lib/useIsMobile'
 import { color, font, label, radius, stageColor, stageLabel, tierLabel } from '../lib/tokens'
 import type { ContactWithScore, Stage } from '../lib/types'
 
@@ -114,6 +115,7 @@ export function Network() {
   const [stageFilter, setStageFilter] = useState<Stage | 'all'>('all')
   const [search, setSearch] = useState('')
   const [view, setView] = useState<View>('cards')
+  const isMobile = useIsMobile()
 
   const counts = useMemo(() => {
     const c: Record<Stage | 'all', number> = {
@@ -138,8 +140,16 @@ export function Network() {
   }, [contacts, stageFilter, search])
 
   return (
-    <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+    <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'stretch' : 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}
+      >
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <FilterChip
             active={stageFilter === 'all'}
@@ -170,11 +180,12 @@ export function Network() {
               color: color.text,
               fontFamily: font.body,
               fontSize: 13,
-              minWidth: 220,
+              minWidth: isMobile ? undefined : 220,
+              width: isMobile ? '100%' : undefined,
               outline: 'none',
             }}
           />
-          <ViewToggle view={view} onChange={setView} />
+          {!isMobile && <ViewToggle view={view} onChange={setView} />}
         </div>
       </div>
 
@@ -188,7 +199,7 @@ export function Network() {
         <div style={{ ...label, color: color.muted }}>No contacts match.</div>
       )}
 
-      {view === 'cards' ? (
+      {isMobile || view === 'cards' ? (
         <div
           style={{
             display: 'grid',
