@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SignalRow } from '../components/SignalRow'
 import { Section } from '../components/Section'
 import { daysAgo, initials } from '../lib/format'
 import { supabase, DEFAULT_USER_ID } from '../lib/supabase'
 import { cardShadow, color, font, kindLabel, label, radius, surfaceGradient } from '../lib/tokens'
+import { useIsMobile } from '../lib/useIsMobile'
 import type { SignalKind, SignalWithContact } from '../lib/types'
 
 const actionableKinds = ['job_change', 'funding', 'post_intent'] as const
@@ -14,6 +16,8 @@ export function Pulse() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  const isMobile = useIsMobile()
 
   async function load() {
     const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
@@ -81,7 +85,7 @@ export function Pulse() {
 
   if (loading) {
     return (
-      <div style={{ padding: 32 }}>
+      <div style={{ padding: isMobile ? 16 : 32 }}>
         <span style={{ ...label, color: color.muted }}>Loading…</span>
       </div>
     )
@@ -89,18 +93,24 @@ export function Pulse() {
 
   if (error) {
     return (
-      <div style={{ padding: 32 }}>
+      <div style={{ padding: isMobile ? 16 : 32 }}>
         <span style={{ ...label, color: color.lime }}>Could not load signals: {error}</span>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
       {actionError && (
         <span style={{ ...label, color: color.lime }}>{actionError}</span>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: 16,
+        }}
+      >
         {actionableKinds.map((kind) => (
           <PulseColumn key={kind} kind={kind} signals={columns[kind]} onDone={markHandled} />
         ))}
@@ -220,16 +230,13 @@ function WeekTable({ signals }: { signals: SignalWithContact[] }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {signals.map((s) => (
-            <div key={s.id} style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ ...label, color: color.dim, width: 90, flexShrink: 0 }}>
-                {new Date(s.occurred_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-              </span>
-              <Link to={`/contact/${s.contact.id}`} style={{ ...label, color: color.text, width: 160, flexShrink: 0, textDecoration: 'none' }}>
-                {s.contact.name}
-              </Link>
-              <span style={{ ...label, color: color.accent, width: 100, flexShrink: 0 }}>{kindLabel[s.kind]}</span>
-              <span style={{ fontSize: 13, color: color.muted }}>{s.detail}</span>
-            </div>
+            <SignalRow
+              key={s.id}
+              date={new Date(s.occurred_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              kind={kindLabel[s.kind]}
+              detail={s.detail}
+              contact={{ id: s.contact.id, name: s.contact.name }}
+            />
           ))}
         </div>
       )}
