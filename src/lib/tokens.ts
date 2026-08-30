@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import type { Stage, Tier } from './types'
+import type { SignalKind, Stage, Tier } from './types'
 
 export const color = {
   bg: '#080908',
@@ -71,4 +71,12 @@ export const tierColor: Record<Tier, string> = {
   keep_warm: color.lime,
   nurture: color.muted,
   parked: color.dim,
+}
+
+export const kindLabel: Record<SignalKind, string> = {
+  reaction: 'Reaction',
+  comment: 'Comment',
+  job_change: 'Job Change',
+  funding: 'Funding',
+  post_intent: 'Post Intent',
 }

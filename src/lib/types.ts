@@ -67,3 +67,9 @@ export interface ContactScore {
 export interface ContactWithScore extends Contact {
   score: ContactScore | null
 }
+
+// Shape returned by a Supabase embedded select of signal -> contact,
+// e.g. .select('*, contact!inner(id, name, company, stage)')
+export interface SignalWithContact extends Signal {
+  contact: Pick<Contact, 'id' | 'name' | 'company' | 'stage'>
+}
