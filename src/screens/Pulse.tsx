@@ -13,6 +13,7 @@ export function Pulse() {
   const [weekSignals, setWeekSignals] = useState<SignalWithContact[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   async function load() {
     const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
@@ -54,8 +55,19 @@ export function Pulse() {
   }, [])
 
   async function markHandled(signalId: string) {
+    const signal = openSignals.find((s) => s.id === signalId)
     setOpenSignals((prev) => prev.filter((s) => s.id !== signalId))
-    await supabase.from('signal').update({ handled_at: new Date().toISOString() }).eq('id', signalId)
+    setActionError(null)
+
+    const { error: updateError } = await supabase
+      .from('signal')
+      .update({ handled_at: new Date().toISOString() })
+      .eq('id', signalId)
+
+    if (updateError && signal) {
+      setOpenSignals((prev) => [...prev, signal].sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)))
+      setActionError(`Could not mark "${signal.contact.name}" handled: ${updateError.message}`)
+    }
   }
 
   const columns = useMemo(
@@ -85,6 +97,9 @@ export function Pulse() {
 
   return (
     <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {actionError && (
+        <span style={{ ...label, color: color.lime }}>{actionError}</span>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {actionableKinds.map((kind) => (
           <PulseColumn key={kind} kind={kind} signals={columns[kind]} onDone={markHandled} />
