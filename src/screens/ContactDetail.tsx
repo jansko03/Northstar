@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Section, StatCell } from '../components/Section'
+import { SignalRow } from '../components/SignalRow'
 import { daysAgo, initials } from '../lib/format'
 import { supabase } from '../lib/supabase'
+import { useIsMobile } from '../lib/useIsMobile'
 import {
   cardShadow,
   color,
@@ -36,6 +38,7 @@ export function ContactDetail() {
   const [savingNote, setSavingNote] = useState(false)
   const [eventDraft, setEventDraft] = useState('')
   const [savingEvent, setSavingEvent] = useState(false)
+  const isMobile = useIsMobile()
 
   async function load() {
     if (!id) return
@@ -107,7 +110,7 @@ export function ContactDetail() {
 
   if (loading) {
     return (
-      <div style={{ padding: 32 }}>
+      <div style={{ padding: isMobile ? 16 : 32 }}>
         <span style={{ ...label, color: color.muted }}>Loading…</span>
       </div>
     )
@@ -115,7 +118,7 @@ export function ContactDetail() {
 
   if (notFound || !contact) {
     return (
-      <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <span style={{ ...label, color: color.lime }}>Contact not found.</span>
         <Link to="/network" style={{ ...label, color: color.accent }}>
           ← Back to network
@@ -134,12 +137,20 @@ export function ContactDetail() {
   const events = notes.filter((n) => n.channel === 'meeting')
 
   return (
-    <div style={{ padding: 32, display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+    <div
+      style={{
+        padding: isMobile ? 16 : 32,
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: 20,
+        alignItems: 'flex-start',
+      }}
+    >
       <aside
         style={{
-          position: 'sticky',
-          top: 84,
-          width: 344,
+          position: isMobile ? 'static' : 'sticky',
+          top: isMobile ? undefined : 84,
+          width: isMobile ? '100%' : 344,
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -302,7 +313,7 @@ export function ContactDetail() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 8,
-                    padding: '11px 10px',
+                    padding: isMobile ? '8px 6px' : '11px 10px',
                     borderRadius: 10,
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -331,7 +342,7 @@ export function ContactDetail() {
                   </div>
                   <span
                     style={{
-                      fontSize: 12,
+                      fontSize: isMobile ? 11 : 12,
                       lineHeight: 1.25,
                       fontWeight: isCurrent ? 600 : 400,
                       color: isCurrent ? color.text : isPast ? color.muted : color.dim,
@@ -410,13 +421,7 @@ export function ContactDetail() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {signals.map((s) => (
-                <div key={s.id} style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                  <span style={{ ...label, color: color.dim, width: 90, flexShrink: 0 }}>
-                    {formatSignalDate(s.occurred_at)}
-                  </span>
-                  <span style={{ ...label, color: color.accent, width: 90, flexShrink: 0 }}>{s.kind}</span>
-                  <span style={{ fontSize: 13, color: color.muted }}>{s.detail}</span>
-                </div>
+                <SignalRow key={s.id} date={formatSignalDate(s.occurred_at)} kind={s.kind} detail={s.detail} />
               ))}
             </div>
           )}
