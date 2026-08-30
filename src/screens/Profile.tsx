@@ -4,6 +4,7 @@ import { Section, StatCell } from '../components/Section'
 import { initials } from '../lib/format'
 import { DEFAULT_USER_ID, supabase } from '../lib/supabase'
 import { useContactsWithScore } from '../lib/useContactsWithScore'
+import { useIsMobile } from '../lib/useIsMobile'
 import {
   cardShadow,
   color,
@@ -49,6 +50,7 @@ export function Profile() {
   const [nameDraft, setNameDraft] = useState('')
   const [headlineDraft, setHeadlineDraft] = useState('')
   const [lookingForDraft, setLookingForDraft] = useState('')
+  const isMobile = useIsMobile()
 
   async function load() {
     const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000)
@@ -132,18 +134,26 @@ export function Profile() {
 
   if (loading || contactsLoading) {
     return (
-      <div style={{ padding: 32 }}>
+      <div style={{ padding: isMobile ? 16 : 32 }}>
         <span style={{ ...label, color: color.muted }}>Loading…</span>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: 32, display: 'grid', gridTemplateColumns: '344px minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
+    <div
+      style={{
+        padding: isMobile ? 16 : 32,
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '344px minmax(0,1fr)',
+        gap: 16,
+        alignItems: 'start',
+      }}
+    >
       <aside
         style={{
-          position: 'sticky',
-          top: 84,
+          position: isMobile ? 'static' : 'sticky',
+          top: isMobile ? undefined : 84,
           display: 'flex',
           flexDirection: 'column',
           background: surfaceGradient,
