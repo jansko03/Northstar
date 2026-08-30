@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Papa from 'papaparse'
+import { Section } from '../components/Section'
 import { DEFAULT_USER_ID, supabase } from '../lib/supabase'
 import { color, font, label, radius, stageLabel } from '../lib/tokens'
 import type { ContactType, SignalKind, Stage } from '../lib/types'
 
 const contactTypes: ContactType[] = ['client', 'partner', 'channel', 'peer', 'unknown']
-const stages: Stage[] = ['silent', 'warming', 'contacted', 'conversation', 'dormant']
+const initialStages: Stage[] = ['silent', 'warming', 'contacted', 'conversation']
+type Mode = 'single' | 'csv'
 
 interface ManualForm {
   name: string
@@ -156,7 +158,7 @@ export function Import() {
   const [parseError, setParseError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [showCsvImport, setShowCsvImport] = useState(false)
+  const [mode, setMode] = useState<Mode>('single')
   const [manualForm, setManualForm] = useState<ManualForm>(emptyManualForm)
   const [manualSaving, setManualSaving] = useState(false)
   const [manualMessage, setManualMessage] = useState<{ text: string; isError: boolean } | null>(null)
@@ -315,20 +317,14 @@ export function Import() {
   }
 
   return (
-    <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 920 }}>
+    <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 760 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <span style={{ ...label, color: color.muted }}>Add a contact</span>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 14,
-            padding: 20,
-            background: color.surface,
-            border: `1px solid ${color.border}`,
-            borderRadius: radius.lg,
-          }}
-        >
+        <ModeToggle mode={mode} onChange={setMode} />
+      </div>
+
+      {mode === 'single' && (
+        <Section title="Quick add">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
             <Field label="Name *">
               <input
@@ -380,7 +376,7 @@ export function Import() {
               <Dropdown
                 value={manualForm.stage}
                 onChange={(v) => setManualForm((f) => ({ ...f, stage: v as Stage }))}
-                options={stages.map((s) => ({ value: s, label: stageLabel[s] }))}
+                options={initialStages.map((s) => ({ value: s, label: stageLabel[s] }))}
               />
             </Field>
           </div>
@@ -389,8 +385,8 @@ export function Import() {
             <button
               type="button"
               onClick={handleManualAdd}
-              disabled={manualSaving}
-              style={primaryButtonStyle(!manualSaving)}
+              disabled={manualSaving || !manualForm.name.trim()}
+              style={primaryButtonStyle(!manualSaving && !!manualForm.name.trim())}
             >
               {manualSaving ? 'Adding…' : 'Add contact'}
             </button>
@@ -400,166 +396,192 @@ export function Import() {
               </span>
             )}
           </div>
-        </div>
-      </div>
-
-      {!hasFile && (
-        <div style={{ borderTop: `1px solid ${color.border}`, paddingTop: 20 }}>
-          <button
-            type="button"
-            onClick={() => setShowCsvImport((v) => !v)}
-            style={{ ...label, background: 'none', border: 'none', color: color.muted, cursor: 'pointer', textAlign: 'left', padding: 0 }}
-          >
-            {showCsvImport ? '− Hide CSV import' : '+ Import from a CSV file instead'}
-          </button>
-        </div>
+        </Section>
       )}
 
-      {showCsvImport && !hasFile && (
-        <div style={{ ...label, color: color.muted, lineHeight: 1.7 }}>
-          Expected columns (header names can vary — they're matched automatically): Name, LinkedIn URL,
-          Email, Role title, Company, Engagement type (e.g. Like / Comment), Date. Only Name and LinkedIn
-          URL are required.
-        </div>
-      )}
-
-      {showCsvImport && !hasFile && (
-        <div
-          onDragOver={(e) => {
-            e.preventDefault()
-            setDragOver(true)
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-          onClick={() => fileInputRef.current?.click()}
-          style={{
-            border: `1px dashed ${dragOver ? color.accent : color.border}`,
-            borderRadius: radius.lg,
-            background: dragOver ? 'rgba(79,227,155,.06)' : color.surface,
-            padding: 48,
-            textAlign: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <div style={{ fontFamily: font.body, fontSize: 15, color: color.text, marginBottom: 6 }}>
-            Drop a CSV export here, or click to browse
-          </div>
-          <div style={{ ...label, color: color.muted }}>LinkedIn engagement export · .csv</div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handleFile(file)
-            }}
-          />
-        </div>
-      )}
-
-      {parseError && <div style={{ ...label, color: color.lime }}>Could not parse CSV: {parseError}</div>}
-
-      {hasFile && (
+      {mode === 'csv' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ ...label, color: color.muted }}>{rows.length} rows parsed</span>
-            <button type="button" onClick={reset} style={ghostButtonStyle}>
-              Choose a different file
-            </button>
-          </div>
-
-          <div style={{ overflowX: 'auto', border: `1px solid ${color.border}`, borderRadius: radius.sm }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12.5, fontFamily: font.body }}>
-              <thead>
-                <tr>
-                  {headers.map((h) => (
-                    <th key={h} style={thStyle}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(0, 5).map((r, i) => (
-                  <tr key={i}>
-                    {headers.map((h) => (
-                      <td key={h} style={tdStyle}>
-                        {r[h]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <span style={{ ...label, color: color.muted }}>Map columns</span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-              {importFields.map(({ field, label: fieldLabel, required }) => (
-                <Field key={field} label={fieldLabel + (required ? ' *' : '')}>
-                  <Dropdown
-                    value={mapping[field] ?? ''}
-                    onChange={(v) => setMapping((m) => ({ ...m, [field]: v || undefined }))}
-                    options={[{ value: '', label: '— none —' }, ...headers.map((h) => ({ value: h, label: h }))]}
-                  />
-                </Field>
-              ))}
-            </div>
-          </div>
-
-          {preview && (
-            <div style={{ ...label, color: color.text }}>
-              {preview.total} contacts, {preview.fresh} new, {preview.known} already known
-            </div>
-          )}
-          {!mapping.name || !mapping.linkedin_url ? (
-            <div style={{ ...label, color: color.lime }}>Map at least Name and LinkedIn URL to import.</div>
-          ) : null}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <button type="button" onClick={runImport} disabled={!canImport} style={primaryButtonStyle(canImport)}>
-              {importing ? 'Importing…' : 'Import'}
-            </button>
-            {importing && (
-              <span style={{ ...label, color: color.muted }}>
-                {progress.done} / {progress.total}
-              </span>
-            )}
-          </div>
-
-          {result && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ ...label, color: color.accent }}>
-                {result.contactsUpserted} contacts upserted, {result.signalsInserted} signals inserted
-                {result.errors.length > 0 ? `, ${result.errors.length} errors` : ''}
+          {!hasFile && (
+            <Section title="Import from a CSV file">
+              <div style={{ ...label, color: color.muted, lineHeight: 1.7 }}>
+                Expected columns (header names can vary — they're matched automatically): Name, LinkedIn URL,
+                Email, Role title, Company, Engagement type (e.g. Like / Comment), Date. Only Name and LinkedIn
+                URL are required.
               </div>
-              {result.errors.length > 0 && (
-                <div
-                  style={{
-                    border: `1px solid ${color.border}`,
-                    borderRadius: radius.sm,
-                    background: color.surface,
-                    padding: 12,
-                    maxHeight: 220,
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 6,
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDragOver(true)
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={onDrop}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: `1px dashed ${dragOver ? color.accent : color.border}`,
+                  borderRadius: radius.sm,
+                  background: dragOver ? 'rgba(79,227,155,.06)' : 'rgba(255,255,255,.02)',
+                  padding: 40,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontFamily: font.body, fontSize: 15, color: color.text, marginBottom: 6 }}>
+                  Drop a CSV export here, or click to browse
+                </div>
+                <div style={{ ...label, color: color.muted }}>LinkedIn engagement export · .csv</div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleFile(file)
                   }}
-                >
-                  {result.errors.map((err, i) => (
-                    <div key={i} style={{ ...label, color: color.muted, fontSize: 10.5 }}>
-                      Row {err.row}: {err.message}
-                    </div>
+                />
+              </div>
+            </Section>
+          )}
+
+          {parseError && <div style={{ ...label, color: color.lime }}>Could not parse CSV: {parseError}</div>}
+
+          {hasFile && (
+            <Section title="Map & import">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ ...label, color: color.muted }}>{rows.length} rows parsed</span>
+                <button type="button" onClick={reset} style={ghostButtonStyle}>
+                  Choose a different file
+                </button>
+              </div>
+
+              <div style={{ overflowX: 'auto', border: `1px solid ${color.border}`, borderRadius: radius.sm }}>
+                <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12.5, fontFamily: font.body }}>
+                  <thead>
+                    <tr>
+                      {headers.map((h) => (
+                        <th key={h} style={thStyle}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.slice(0, 5).map((r, i) => (
+                      <tr key={i}>
+                        {headers.map((h) => (
+                          <td key={h} style={tdStyle}>
+                            {r[h]}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <span style={{ ...label, color: color.muted }}>Map columns</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                  {importFields.map(({ field, label: fieldLabel, required }) => (
+                    <Field key={field} label={fieldLabel + (required ? ' *' : '')}>
+                      <Dropdown
+                        value={mapping[field] ?? ''}
+                        onChange={(v) => setMapping((m) => ({ ...m, [field]: v || undefined }))}
+                        options={[{ value: '', label: '— none —' }, ...headers.map((h) => ({ value: h, label: h }))]}
+                      />
+                    </Field>
                   ))}
                 </div>
+              </div>
+
+              {preview && (
+                <div style={{ ...label, color: color.text }}>
+                  {preview.total} contacts, {preview.fresh} new, {preview.known} already known
+                </div>
               )}
-            </div>
+              {!mapping.name || !mapping.linkedin_url ? (
+                <div style={{ ...label, color: color.lime }}>Map at least Name and LinkedIn URL to import.</div>
+              ) : null}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <button type="button" onClick={runImport} disabled={!canImport} style={primaryButtonStyle(canImport)}>
+                  {importing ? 'Importing…' : 'Import'}
+                </button>
+                {importing && (
+                  <span style={{ ...label, color: color.muted }}>
+                    {progress.done} / {progress.total}
+                  </span>
+                )}
+              </div>
+
+              {result && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ ...label, color: color.accent }}>
+                    {result.contactsUpserted} contacts upserted, {result.signalsInserted} signals inserted
+                    {result.errors.length > 0 ? `, ${result.errors.length} errors` : ''}
+                  </div>
+                  {result.errors.length > 0 && (
+                    <div
+                      style={{
+                        border: `1px solid ${color.border}`,
+                        borderRadius: radius.sm,
+                        background: color.surface,
+                        padding: 12,
+                        maxHeight: 220,
+                        overflowY: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                      }}
+                    >
+                      {result.errors.map((err, i) => (
+                        <div key={i} style={{ ...label, color: color.muted, fontSize: 10.5 }}>
+                          Row {err.row}: {err.message}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Section>
           )}
         </>
       )}
+    </div>
+  )
+}
+
+function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 4,
+        padding: 4,
+        alignSelf: 'flex-start',
+        background: color.surface,
+        border: `1px solid ${color.border}`,
+        borderRadius: radius.sm,
+      }}
+    >
+      {(['single', 'csv'] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => onChange(m)}
+          style={{
+            ...label,
+            padding: '7px 14px',
+            borderRadius: radius.sm - 4,
+            border: 'none',
+            background: mode === m ? 'rgba(79,227,155,.13)' : 'transparent',
+            color: mode === m ? color.accent : color.muted,
+            cursor: 'pointer',
+          }}
+        >
+          {m === 'single' ? 'Add one' : 'Import CSV'}
+        </button>
+      ))}
     </div>
   )
 }
