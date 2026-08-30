@@ -10,6 +10,7 @@ const stages: Stage[] = ['silent', 'warming', 'contacted', 'conversation', 'dorm
 interface ManualForm {
   name: string
   linkedin_url: string
+  email: string
   role_title: string
   company: string
   contact_type: ContactType
@@ -19,13 +20,14 @@ interface ManualForm {
 const emptyManualForm: ManualForm = {
   name: '',
   linkedin_url: '',
+  email: '',
   role_title: '',
   company: '',
   contact_type: 'unknown',
   stage: 'silent',
 }
 
-type ImportField = 'name' | 'linkedin_url' | 'role_title' | 'company' | 'engagement_type' | 'date'
+type ImportField = 'name' | 'linkedin_url' | 'email' | 'role_title' | 'company' | 'engagement_type' | 'date'
 
 type ColumnMapping = Partial<Record<ImportField, string>>
 
@@ -43,6 +45,7 @@ interface ImportResult {
 const importFields: { field: ImportField; label: string; required: boolean }[] = [
   { field: 'name', label: 'Name', required: true },
   { field: 'linkedin_url', label: 'LinkedIn URL', required: true },
+  { field: 'email', label: 'Email', required: false },
   { field: 'role_title', label: 'Role title', required: false },
   { field: 'company', label: 'Company', required: false },
   { field: 'engagement_type', label: 'Engagement type', required: false },
@@ -52,6 +55,7 @@ const importFields: { field: ImportField; label: string; required: boolean }[] =
 const fieldCandidates: Record<ImportField, string[]> = {
   name: ['name', 'fullname', 'contactname', 'person'],
   linkedin_url: ['linkedinurl', 'profileurl', 'linkedin', 'profilelink', 'url', 'link'],
+  email: ['email', 'emailaddress', 'workemail', 'contactemail'],
   role_title: ['title', 'role', 'position', 'jobtitle', 'headline'],
   company: ['company', 'organization', 'organisation', 'employer'],
   engagement_type: ['engagementtype', 'reactiontype', 'interactiontype', 'action', 'type'],
@@ -97,6 +101,7 @@ function parseDate(raw: string | undefined): string {
 interface ContactGroup {
   linkedin_url: string
   name: string
+  email: string | null
   role_title: string | null
   company: string | null
   rows: number[]
@@ -126,6 +131,7 @@ function buildGroups(
       g = {
         linkedin_url,
         name,
+        email: mapping.email ? (row[mapping.email]?.trim() || null) : null,
         role_title: mapping.role_title ? (row[mapping.role_title]?.trim() || null) : null,
         company: mapping.company ? (row[mapping.company]?.trim() || null) : null,
         rows: [],
@@ -171,6 +177,7 @@ export function Import() {
       role_title: manualForm.role_title.trim() || null,
       company: manualForm.company.trim() || null,
       linkedin_url,
+      email: manualForm.email.trim() || null,
       contact_type: manualForm.contact_type,
       stage: manualForm.stage,
     }
@@ -253,6 +260,7 @@ export function Import() {
             role_title: g.role_title,
             company: g.company,
             linkedin_url: g.linkedin_url,
+            email: g.email,
             contact_type: 'unknown',
           },
           { onConflict: 'user_id,linkedin_url' },
@@ -338,6 +346,15 @@ export function Import() {
                 style={selectStyle}
               />
             </Field>
+            <Field label="Email">
+              <input
+                type="email"
+                value={manualForm.email}
+                onChange={(e) => setManualForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="jane@company.com"
+                style={selectStyle}
+              />
+            </Field>
             <Field label="Role title">
               <input
                 value={manualForm.role_title}
@@ -400,8 +417,9 @@ export function Import() {
 
       {showCsvImport && !hasFile && (
         <div style={{ ...label, color: color.muted, lineHeight: 1.7 }}>
-          Expected columns (header names can vary — they're matched automatically): Name, LinkedIn URL, Role
-          title, Company, Engagement type (e.g. Like / Comment), Date. Only Name and LinkedIn URL are required.
+          Expected columns (header names can vary — they're matched automatically): Name, LinkedIn URL,
+          Email, Role title, Company, Engagement type (e.g. Like / Comment), Date. Only Name and LinkedIn
+          URL are required.
         </div>
       )}
 
