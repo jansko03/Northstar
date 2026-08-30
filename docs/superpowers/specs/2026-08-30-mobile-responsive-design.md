@@ -41,9 +41,10 @@ Layouts that will break under 680px width, found by reading each screen:
 - `NetworkMap.tsx` — radial layout with fixed pixel radii (tier rings up to
   346px from center, ~700px total diameter, `MAP_HEIGHT = 780`). Not
   reflowable to a phone width without a full rebuild.
-- `Import.tsx` — CSV preview `<table>` is `width: 100%` with no scroll
-  wrapper; will squeeze/break on narrow screens. The two column-mapping grids
-  already use `auto-fill, minmax(220px, 1fr)` and reflow fine.
+- `Import.tsx` — root container uses a flat `padding: 32`; too much on a
+  phone. The CSV preview `<table>` is already wrapped in
+  `overflowX: 'auto'` and the two column-mapping grids already use
+  `auto-fill, minmax(220px, 1fr)` — both reflow fine as-is.
 
 Layouts that already reflow correctly and need no change:
 - `Network.tsx` card grid (`auto-fill, minmax(292px, 1fr)`).
@@ -172,9 +173,9 @@ Every screen and `NavBar` call this hook and branch their existing inline
 
 ### `Import.tsx`
 
-- CSV preview `<table>`: wrap in `<div style={{ overflowX: 'auto' }}>`.
 - Root `maxWidth: 760` stays; root padding: `padding: isMobile ? 16 : 32`.
-- No other changes.
+- No other changes — the preview table's scroll wrapper and the mapping
+  grids already reflow correctly.
 
 ### `SignalRow` component
 
