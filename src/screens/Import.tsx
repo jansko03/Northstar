@@ -4,6 +4,7 @@ import { Section } from '../components/Section'
 import { DEFAULT_USER_ID, supabase } from '../lib/supabase'
 import { color, font, label, radius, stageLabel } from '../lib/tokens'
 import type { ContactType, SignalKind, Stage } from '../lib/types'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const contactTypes: ContactType[] = ['client', 'partner', 'channel', 'peer', 'unknown']
 const initialStages: Stage[] = ['silent', 'warming', 'contacted', 'conversation']
@@ -163,6 +164,8 @@ export function Import() {
   const [manualSaving, setManualSaving] = useState(false)
   const [manualMessage, setManualMessage] = useState<{ text: string; isError: boolean } | null>(null)
 
+  const isMobile = useIsMobile()
+
   async function handleManualAdd() {
     const name = manualForm.name.trim()
     if (!name) {
@@ -317,7 +320,7 @@ export function Import() {
   }
 
   return (
-    <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 760 }}>
+    <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 760 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <span style={{ ...label, color: color.muted }}>Add a contact</span>
         <ModeToggle mode={mode} onChange={setMode} />
