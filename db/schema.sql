@@ -22,6 +22,7 @@ create table contact (
   role_title    text,
   company       text,
   linkedin_url  text,
+  email         text,
   contact_type  text default 'unknown'
                 check (contact_type in ('client','partner','channel','peer','unknown')),
   stage         text default 'silent'

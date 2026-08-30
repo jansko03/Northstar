@@ -13,6 +13,7 @@ export interface Contact {
   role_title: string | null
   company: string | null
   linkedin_url: string | null
+  email: string | null
   contact_type: ContactType
   stage: Stage
   last_touch_at: string | null
