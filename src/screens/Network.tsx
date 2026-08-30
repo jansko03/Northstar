@@ -192,8 +192,8 @@ export function Network() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(272px, 1fr))',
-            gap: 14,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(292px, 1fr))',
+            gap: 22,
           }}
         >
           {filtered.map((c) => (
