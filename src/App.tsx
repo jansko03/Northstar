@@ -4,7 +4,7 @@ import { ContactDetail } from './screens/ContactDetail'
 import { Import } from './screens/Import'
 import { Network } from './screens/Network'
 import { Profile } from './screens/Profile'
-import { Todo } from './screens/Todo'
+import { Pulse } from './screens/Pulse'
 
 function App() {
   return (
@@ -14,7 +14,7 @@ function App() {
         <Route path="/" element={<Navigate to="/network" replace />} />
         <Route path="/network" element={<Network />} />
         <Route path="/import" element={<Import />} />
-        <Route path="/pulse" element={<Todo name="Pulse" />} />
+        <Route path="/pulse" element={<Pulse />} />
         <Route path="/contact/:id" element={<ContactDetail />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
