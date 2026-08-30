@@ -216,23 +216,39 @@ export function ContactDetail() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, padding: '18px 22px' }}>
-          <button
-            type="button"
-            disabled
-            title="Email drafting isn't available yet"
-            style={{
-              ...label,
-              padding: '12px',
-              textAlign: 'center',
-              background: 'rgba(255,255,255,.03)',
-              border: `1px solid ${color.border}`,
-              borderRadius: radius.sm,
-              color: color.dim,
-              cursor: 'not-allowed',
-            }}
-          >
-            Draft email
-          </button>
+          {contact.email ? (
+            <a
+              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contact.email)}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                ...label,
+                padding: '12px',
+                textAlign: 'center',
+                background: 'rgba(79,227,155,.11)',
+                border: `1px solid rgba(79,227,155,.34)`,
+                borderRadius: radius.sm,
+                color: color.accent,
+                textDecoration: 'none',
+              }}
+            >
+              Write email
+            </a>
+          ) : (
+            <span
+              style={{
+                ...label,
+                padding: '12px',
+                textAlign: 'center',
+                background: 'rgba(255,255,255,.03)',
+                border: `1px solid ${color.border}`,
+                borderRadius: radius.sm,
+                color: color.dim,
+              }}
+            >
+              No email on file
+            </span>
+          )}
           {contact.linkedin_url ? (
             <a
               href={contact.linkedin_url}
