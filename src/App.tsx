@@ -1,17 +1,31 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { MOBILE_BOTTOM_NAV_HEIGHT, NavBar } from './components/NavBar'
+import { AuthProvider, useAuth } from './lib/AuthContext'
+import { color, label } from './lib/tokens'
 import { useIsMobile } from './lib/useIsMobile'
 import { ContactDetail } from './screens/ContactDetail'
 import { Import } from './screens/Import'
 import { Network } from './screens/Network'
 import { Profile } from './screens/Profile'
 import { Pulse } from './screens/Pulse'
+import { Welcome } from './screens/Welcome'
 
-function App() {
+function AppRoutes() {
   const isMobile = useIsMobile()
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ ...label, color: color.muted }}>Loading…</span>
+      </div>
+    )
+  }
+
+  if (!user) return <Welcome />
 
   return (
-    <BrowserRouter>
+    <>
       <NavBar />
       <div
         style={{
@@ -29,6 +43,16 @@ function App() {
           <Route path="/profile" element={<Profile />} />
         </Routes>
       </div>
+    </>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   )
 }
