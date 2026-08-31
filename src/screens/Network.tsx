@@ -274,7 +274,7 @@ function FilterDivider() {
   return (
     <div
       aria-hidden
-      style={{ width: 1, height: 18, background: color.border, flexShrink: 0, alignSelf: 'center' }}
+      style={{ width: 1, height: 18, background: 'rgba(255,255,255,.16)', flexShrink: 0, alignSelf: 'center' }}
     />
   )
 }
@@ -306,7 +306,6 @@ function FilterChip({
         border: `1px solid ${active ? color.accent : color.border}`,
         background: active ? 'rgba(79,227,155,.08)' : color.surface,
         color: active ? color.accent : muted ? color.dim : color.muted,
-        opacity: muted && !active ? 0.7 : 1,
         cursor: 'pointer',
       }}
     >
