@@ -9,7 +9,7 @@ import type { ContactWithScore, Stage } from '../lib/types'
 
 type View = 'cards' | 'map'
 
-const stages: Stage[] = ['silent', 'warming', 'contacted', 'conversation', 'dormant']
+const pipelineStages: Stage[] = ['silent', 'warming', 'contacted', 'conversation']
 
 function ContactCard({ contact }: { contact: ContactWithScore }) {
   const subtitle = [contact.role_title, contact.company].filter(Boolean).join(' · ')
@@ -180,14 +180,15 @@ export function Network() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <FilterChip
           active={stageFilter === 'all'}
           onClick={() => setStageFilter('all')}
           text="All"
           count={counts.all}
         />
-        {stages.map((s) => (
+        <FilterDivider />
+        {pipelineStages.map((s) => (
           <FilterChip
             key={s}
             active={stageFilter === s}
@@ -196,6 +197,14 @@ export function Network() {
             count={counts[s]}
           />
         ))}
+        <FilterDivider />
+        <FilterChip
+          active={stageFilter === 'dormant'}
+          onClick={() => setStageFilter('dormant')}
+          text={stageLabel.dormant}
+          count={counts.dormant}
+          muted
+        />
       </div>
 
       {loading && <div style={{ ...label, color: color.muted }}>Loading…</div>}
@@ -261,16 +270,27 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
   )
 }
 
+function FilterDivider() {
+  return (
+    <div
+      aria-hidden
+      style={{ width: 1, height: 18, background: color.border, flexShrink: 0, alignSelf: 'center' }}
+    />
+  )
+}
+
 function FilterChip({
   active,
   onClick,
   text,
   count,
+  muted,
 }: {
   active: boolean
   onClick: () => void
   text: string
   count: number
+  muted?: boolean
 }) {
   return (
     <button
@@ -285,7 +305,8 @@ function FilterChip({
         borderRadius: 999,
         border: `1px solid ${active ? color.accent : color.border}`,
         background: active ? 'rgba(79,227,155,.08)' : color.surface,
-        color: active ? color.accent : color.muted,
+        color: active ? color.accent : muted ? color.dim : color.muted,
+        opacity: muted && !active ? 0.7 : 1,
         cursor: 'pointer',
       }}
     >
