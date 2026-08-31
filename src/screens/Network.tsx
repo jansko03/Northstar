@@ -150,22 +150,13 @@ export function Network() {
           gap: 16,
         }}
       >
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <FilterChip
-            active={stageFilter === 'all'}
-            onClick={() => setStageFilter('all')}
-            text="All"
-            count={counts.all}
-          />
-          {stages.map((s) => (
-            <FilterChip
-              key={s}
-              active={stageFilter === s}
-              onClick={() => setStageFilter(s)}
-              text={stageLabel[s]}
-              count={counts[s]}
-            />
-          ))}
+        <div>
+          <div style={{ fontFamily: font.body, fontSize: 20, fontWeight: 600, color: color.text }}>
+            Network
+          </div>
+          <div style={{ ...label, color: color.dim, marginTop: 4 }}>
+            {counts.all} {counts.all === 1 ? 'contact' : 'contacts'}
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input
@@ -187,6 +178,24 @@ export function Network() {
           />
           {!isMobile && <ViewToggle view={view} onChange={setView} />}
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <FilterChip
+          active={stageFilter === 'all'}
+          onClick={() => setStageFilter('all')}
+          text="All"
+          count={counts.all}
+        />
+        {stages.map((s) => (
+          <FilterChip
+            key={s}
+            active={stageFilter === s}
+            onClick={() => setStageFilter(s)}
+            text={stageLabel[s]}
+            count={counts[s]}
+          />
+        ))}
       </div>
 
       {loading && <div style={{ ...label, color: color.muted }}>Loading…</div>}
