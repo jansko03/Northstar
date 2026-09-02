@@ -1,24 +1,51 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Section } from '../components/Section'
 import { DEFAULT_USER_ID, supabase } from '../lib/supabase'
+import { useContactsWithScore } from '../lib/useContactsWithScore'
 import { color, font, kindLabel, label, radius } from '../lib/tokens'
 import { useIsMobile } from '../lib/useIsMobile'
 import type { SignalKind } from '../lib/types'
 
 const ALL_KINDS: SignalKind[] = ['reaction', 'comment', 'job_change', 'funding', 'post_intent']
 
+const inputStyle = {
+  background: color.surface,
+  border: `1px solid ${color.border}`,
+  borderRadius: radius.sm,
+  padding: '8px 10px',
+  color: color.text,
+  fontFamily: font.body,
+  fontSize: 13,
+  outline: 'none',
+} as const
+
 export function Admin() {
+  const { contacts, loading: contactsLoading } = useContactsWithScore()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pulseKinds, setPulseKinds] = useState<SignalKind[]>([])
   const [notifyKinds, setNotifyKinds] = useState<SignalKind[]>([])
+  const [notifyContactIds, setNotifyContactIds] = useState<string[]>([])
+  const [contactSearch, setContactSearch] = useState('')
   const isMobile = useIsMobile()
+
+  // Memoized (not recomputed inline in the JSX below) so its reference stays
+  // stable across renders that don't actually change contacts/notifyContactIds
+  // (e.g. typing in the search box) — SimulatedFeed's effect depends on this
+  // array by reference, and an unstable reference would restart its timer on
+  // every keystroke. Placed before the loading early-return below since
+  // hooks can't be called after a conditional return.
+  const watchlist = useMemo(
+    () => contacts.filter((c) => notifyContactIds.includes(c.id)),
+    [contacts, notifyContactIds],
+  )
 
   async function load() {
     const userRes = await supabase.from('app_user').select('*').eq('id', DEFAULT_USER_ID).maybeSingle()
     if (userRes.data) {
       setPulseKinds((userRes.data.pulse_actionable_kinds ?? []) as SignalKind[])
       setNotifyKinds((userRes.data.notify_kinds ?? []) as SignalKind[])
+      setNotifyContactIds((userRes.data.notify_contact_ids ?? []) as string[])
     }
     setLoading(false)
   }
@@ -32,22 +59,46 @@ export function Admin() {
     setList(list.includes(kind) ? list.filter((k) => k !== kind) : [...list, kind])
   }
 
+  function addContact(id: string) {
+    setNotifyContactIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+    setContactSearch('')
+  }
+
+  function removeContact(id: string) {
+    setNotifyContactIds((prev) => prev.filter((c) => c !== id))
+  }
+
   async function save() {
     setSaving(true)
     await supabase
       .from('app_user')
-      .update({ pulse_actionable_kinds: pulseKinds, notify_kinds: notifyKinds })
+      .update({
+        pulse_actionable_kinds: pulseKinds,
+        notify_kinds: notifyKinds,
+        notify_contact_ids: notifyContactIds,
+      })
       .eq('id', DEFAULT_USER_ID)
     setSaving(false)
   }
 
-  if (loading) {
+  if (loading || contactsLoading) {
     return (
       <div style={{ padding: isMobile ? 16 : 32 }}>
         <span style={{ ...label, color: color.muted }}>Loading…</span>
       </div>
     )
   }
+
+  const searchMatches =
+    contactSearch.trim().length > 0
+      ? contacts
+          .filter(
+            (c) =>
+              !notifyContactIds.includes(c.id) &&
+              c.name.toLowerCase().includes(contactSearch.trim().toLowerCase()),
+          )
+          .slice(0, 6)
+      : []
 
   return (
     <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -87,6 +138,49 @@ export function Admin() {
               />
             ))}
           </div>
+        </Section>
+
+        <Section title="Watchlist">
+          <span style={{ fontSize: 13, color: color.muted, lineHeight: 1.5 }}>
+            Specific people to notify about no matter what they do.
+          </span>
+          <input
+            value={contactSearch}
+            onChange={(e) => setContactSearch(e.target.value)}
+            placeholder="Search contacts to add"
+            style={inputStyle}
+          />
+          {searchMatches.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {searchMatches.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => addContact(c.id)}
+                  style={{
+                    ...label,
+                    textAlign: 'left',
+                    padding: '8px 10px',
+                    background: color.surface,
+                    border: `1px solid ${color.border}`,
+                    borderRadius: radius.sm - 6,
+                    color: color.text,
+                    cursor: 'pointer',
+                  }}
+                >
+                  + {c.name}
+                  {c.company ? ` · ${c.company}` : ''}
+                </button>
+              ))}
+            </div>
+          )}
+          {watchlist.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {watchlist.map((c) => (
+                <ContactChip key={c.id} name={c.name} onRemove={() => removeContact(c.id)} />
+              ))}
+            </div>
+          )}
         </Section>
       </div>
 
@@ -130,5 +224,47 @@ function KindChip({ active, label: text, onClick }: { active: boolean; label: st
     >
       {text}
     </button>
+  )
+}
+
+function ContactChip({ name, onRemove }: { name: string; onRemove: () => void }) {
+  return (
+    <span
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '6px 6px 6px 12px',
+        borderRadius: 999,
+        border: `1px solid ${color.accent}`,
+        background: 'rgba(79,227,155,.08)',
+        color: color.accent,
+        fontFamily: font.body,
+        fontSize: 13,
+      }}
+    >
+      {name}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${name} from watchlist`}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 18,
+          height: 18,
+          borderRadius: '50%',
+          border: 'none',
+          background: 'rgba(79,227,155,.16)',
+          color: color.accent,
+          fontSize: 12,
+          lineHeight: 1,
+          cursor: 'pointer',
+        }}
+      >
+        ×
+      </button>
+    </span>
   )
 }
