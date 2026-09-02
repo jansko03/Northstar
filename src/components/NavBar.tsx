@@ -7,7 +7,7 @@ const links = [
   { to: '/import', text: 'Import' },
   { to: '/pulse', text: 'Pulse' },
   { to: '/profile', text: 'Profile' },
-  { to: '/admin', text: 'Admin' },
+  { to: '/admin', text: 'Admin (temp)', temp: true },
 ]
 
 export const MOBILE_BOTTOM_NAV_HEIGHT = 60
@@ -27,13 +27,16 @@ function NavLinks({ mobile }: { mobile: boolean }) {
             flex: mobile ? 1 : undefined,
             padding: mobile ? '10px 6px' : '7px 14px',
             borderRadius: mobile ? 10 : 11,
-            color: isActive ? color.accent : color.muted,
-            background: isActive
-              ? 'linear-gradient(180deg, rgba(79,227,155,.19), rgba(79,227,155,.07))'
-              : 'transparent',
-            boxShadow: isActive
-              ? '0 1px 0 rgba(255,255,255,.07) inset, 0 6px 18px -12px rgba(79,227,155,.7)'
-              : 'none',
+            border: link.temp ? `1px dashed ${color.border}` : 'none',
+            color: link.temp ? color.dim : isActive ? color.accent : color.muted,
+            background:
+              !link.temp && isActive
+                ? 'linear-gradient(180deg, rgba(79,227,155,.19), rgba(79,227,155,.07))'
+                : 'transparent',
+            boxShadow:
+              !link.temp && isActive
+                ? '0 1px 0 rgba(255,255,255,.07) inset, 0 6px 18px -12px rgba(79,227,155,.7)'
+                : 'none',
             textDecoration: 'none',
           })}
         >
