@@ -7,6 +7,7 @@ const links = [
   { to: '/import', text: 'Import' },
   { to: '/pulse', text: 'Pulse' },
   { to: '/profile', text: 'Profile' },
+  { to: '/admin', text: 'Admin' },
 ]
 
 export const MOBILE_BOTTOM_NAV_HEIGHT = 60

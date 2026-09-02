@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { MOBILE_BOTTOM_NAV_HEIGHT, NavBar } from './components/NavBar'
 import { useIsMobile } from './lib/useIsMobile'
+import { Admin } from './screens/Admin'
 import { ContactDetail } from './screens/ContactDetail'
 import { Import } from './screens/Import'
 import { Network } from './screens/Network'
@@ -27,6 +28,7 @@ function App() {
           <Route path="/pulse" element={<Pulse />} />
           <Route path="/contact/:id" element={<ContactDetail />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </div>
     </BrowserRouter>

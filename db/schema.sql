@@ -8,11 +8,30 @@ create table app_user (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   headline text,
-  looking_for text
+  looking_for text,
+  pulse_actionable_kinds text[] not null default array['job_change','funding','post_intent']
+    check (pulse_actionable_kinds <@ array['reaction','comment','job_change','funding','post_intent']),
+  notify_kinds text[] not null default array[]::text[]
+    check (notify_kinds <@ array['reaction','comment','job_change','funding','post_intent'])
 );
 
 insert into app_user (id, name, headline)
 values ('00000000-0000-0000-0000-000000000001', 'Me', 'B2B consultant');
+
+-- Migration: run this against an existing live database (SQL editor) —
+-- the create table above only applies to a fresh install.
+-- Adds Admin screen settings: which signal kinds show up on Pulse, and
+-- which kinds the user wants to be notified about (no delivery yet).
+--
+-- alter table app_user
+--   add column pulse_actionable_kinds text[] not null default array['job_change','funding','post_intent'],
+--   add constraint app_user_pulse_actionable_kinds_check
+--     check (pulse_actionable_kinds <@ array['reaction','comment','job_change','funding','post_intent']);
+--
+-- alter table app_user
+--   add column notify_kinds text[] not null default array[]::text[],
+--   add constraint app_user_notify_kinds_check
+--     check (notify_kinds <@ array['reaction','comment','job_change','funding','post_intent']);
 
 create table contact (
   id            uuid primary key default gen_random_uuid(),

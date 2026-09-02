@@ -51,6 +51,8 @@ export interface AppUser {
   name: string
   headline: string | null
   looking_for: string | null
+  pulse_actionable_kinds: SignalKind[]
+  notify_kinds: SignalKind[]
 }
 
 // The contact_score Postgres view — see db/schema.sql. Never reimplement

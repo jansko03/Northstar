@@ -8,11 +8,14 @@ import { cardShadow, color, font, kindLabel, label, radius, surfaceGradient } fr
 import { useIsMobile } from '../lib/useIsMobile'
 import type { SignalKind, SignalWithContact } from '../lib/types'
 
-const actionableKinds = ['job_change', 'funding', 'post_intent'] as const
+// Fallback used only until app_user has loaded — matches the schema
+// default for pulse_actionable_kinds.
+const DEFAULT_ACTIONABLE_KINDS: SignalKind[] = ['job_change', 'funding', 'post_intent']
 
 export function Pulse() {
   const [openSignals, setOpenSignals] = useState<SignalWithContact[]>([])
   const [weekSignals, setWeekSignals] = useState<SignalWithContact[]>([])
+  const [actionableKinds, setActionableKinds] = useState<SignalKind[]>(DEFAULT_ACTIONABLE_KINDS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -22,14 +25,8 @@ export function Pulse() {
   async function load() {
     const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
 
-    const [openRes, weekRes] = await Promise.all([
-      supabase
-        .from('signal')
-        .select('id, contact_id, kind, detail, occurred_at, handled_at, created_at, contact!inner(id, name, company, stage, user_id)')
-        .eq('contact.user_id', DEFAULT_USER_ID)
-        .is('handled_at', null)
-        .in('kind', actionableKinds)
-        .order('occurred_at', { ascending: true }),
+    const [userRes, weekRes] = await Promise.all([
+      supabase.from('app_user').select('pulse_actionable_kinds').eq('id', DEFAULT_USER_ID).maybeSingle(),
       supabase
         .from('signal')
         .select('id, contact_id, kind, detail, occurred_at, handled_at, created_at, contact!inner(id, name, company, stage, user_id)')
@@ -37,6 +34,20 @@ export function Pulse() {
         .gte('occurred_at', weekAgo)
         .order('occurred_at', { ascending: false }),
     ])
+
+    const kinds = userRes.data ? (userRes.data.pulse_actionable_kinds as SignalKind[]) : DEFAULT_ACTIONABLE_KINDS
+    setActionableKinds(kinds)
+
+    const openRes =
+      kinds.length > 0
+        ? await supabase
+            .from('signal')
+            .select('id, contact_id, kind, detail, occurred_at, handled_at, created_at, contact!inner(id, name, company, stage, user_id)')
+            .eq('contact.user_id', DEFAULT_USER_ID)
+            .is('handled_at', null)
+            .in('kind', kinds)
+            .order('occurred_at', { ascending: true })
+        : { data: [] as unknown as SignalWithContact[], error: null }
 
     if (openRes.error) {
       setError(openRes.error.message)
@@ -75,12 +86,11 @@ export function Pulse() {
   }
 
   const columns = useMemo(
-    () => ({
-      job_change: openSignals.filter((s) => s.kind === 'job_change'),
-      funding: openSignals.filter((s) => s.kind === 'funding'),
-      post_intent: openSignals.filter((s) => s.kind === 'post_intent'),
-    }),
-    [openSignals],
+    () =>
+      Object.fromEntries(
+        actionableKinds.map((kind) => [kind, openSignals.filter((s) => s.kind === kind)]),
+      ) as Record<SignalKind, SignalWithContact[]>,
+    [openSignals, actionableKinds],
   )
 
   if (loading) {
@@ -107,13 +117,17 @@ export function Pulse() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr' : `repeat(${Math.max(actionableKinds.length, 1)}, 1fr)`,
           gap: 16,
         }}
       >
-        {actionableKinds.map((kind) => (
-          <PulseColumn key={kind} kind={kind} signals={columns[kind]} onDone={markHandled} />
-        ))}
+        {actionableKinds.length === 0 ? (
+          <span style={{ fontSize: 13, color: color.dim }}>No Pulse signal kinds selected. Choose some in Admin.</span>
+        ) : (
+          actionableKinds.map((kind) => (
+            <PulseColumn key={kind} kind={kind} signals={columns[kind]} onDone={markHandled} />
+          ))
+        )}
       </div>
       <WeekTable signals={weekSignals} />
     </div>
