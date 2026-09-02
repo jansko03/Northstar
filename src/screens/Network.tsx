@@ -86,15 +86,7 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              background: stageColor[contact.stage],
-              flexShrink: 0,
-            }}
-          />
+          <StageDot stage={contact.stage} />
           <span style={{ ...label, color: color.muted }}>{stageLabel[contact.stage]}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -188,21 +180,14 @@ export function Network() {
           count={counts.all}
         />
         <FilterDivider />
-        {pipelineStages.map((s) => (
-          <FilterChip
-            key={s}
-            active={stageFilter === s}
-            onClick={() => setStageFilter(s)}
-            text={stageLabel[s]}
-            count={counts[s]}
-          />
-        ))}
+        <PipelineTabs stageFilter={stageFilter} counts={counts} onSelect={setStageFilter} />
         <FilterDivider />
         <FilterChip
           active={stageFilter === 'dormant'}
           onClick={() => setStageFilter('dormant')}
           text={stageLabel.dormant}
           count={counts.dormant}
+          dotColor={stageColor.dormant}
           muted
         />
       </div>
@@ -279,18 +264,34 @@ function FilterDivider() {
   )
 }
 
+function StageDot({ stage }: { stage: Stage }) {
+  return (
+    <span
+      style={{
+        width: 7,
+        height: 7,
+        borderRadius: '50%',
+        background: stageColor[stage],
+        flexShrink: 0,
+      }}
+    />
+  )
+}
+
 function FilterChip({
   active,
   onClick,
   text,
   count,
   muted,
+  dotColor,
 }: {
   active: boolean
   onClick: () => void
   text: string
   count: number
   muted?: boolean
+  dotColor?: string
 }) {
   return (
     <button
@@ -300,7 +301,7 @@ function FilterChip({
         ...label,
         display: 'flex',
         alignItems: 'center',
-        gap: 6,
+        gap: 7,
         padding: '8px 12px',
         borderRadius: 999,
         border: `1px solid ${active ? color.accent : color.border}`,
@@ -309,8 +310,63 @@ function FilterChip({
         cursor: 'pointer',
       }}
     >
+      {dotColor && (
+        <span
+          style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }}
+        />
+      )}
       {text}
       <span style={{ color: active ? color.accent : color.dim }}>{count}</span>
     </button>
+  )
+}
+
+function PipelineTabs({
+  stageFilter,
+  counts,
+  onSelect,
+}: {
+  stageFilter: Stage | 'all'
+  counts: Record<Stage | 'all', number>
+  onSelect: (s: Stage) => void
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 3,
+        padding: 3,
+        background: color.surface,
+        border: `1px solid ${color.border}`,
+        borderRadius: 999,
+      }}
+    >
+      {pipelineStages.map((s) => {
+        const active = stageFilter === s
+        return (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onSelect(s)}
+            style={{
+              ...label,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              padding: '7px 11px',
+              borderRadius: 999 - 3,
+              border: 'none',
+              background: active ? 'rgba(79,227,155,.13)' : 'transparent',
+              color: active ? color.accent : color.muted,
+              cursor: 'pointer',
+            }}
+          >
+            <StageDot stage={s} />
+            {stageLabel[s]}
+            <span style={{ color: active ? color.accent : color.dim }}>{counts[s]}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
