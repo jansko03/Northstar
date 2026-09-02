@@ -11,7 +11,7 @@ create table app_user (
   looking_for text,
   pulse_actionable_kinds text[] not null default array['job_change','funding','post_intent']
     check (pulse_actionable_kinds <@ array['reaction','comment','job_change','funding','post_intent']),
-  notify_kinds text[] not null default array[]::text[]
+  notify_kinds text[] not null default array['comment']
     check (notify_kinds <@ array['reaction','comment','job_change','funding','post_intent'])
 );
 
@@ -29,7 +29,7 @@ values ('00000000-0000-0000-0000-000000000001', 'Me', 'B2B consultant');
 --     check (pulse_actionable_kinds <@ array['reaction','comment','job_change','funding','post_intent']);
 --
 -- alter table app_user
---   add column notify_kinds text[] not null default array[]::text[],
+--   add column notify_kinds text[] not null default array['comment'],
 --   add constraint app_user_notify_kinds_check
 --     check (notify_kinds <@ array['reaction','comment','job_change','funding','post_intent']);
 
