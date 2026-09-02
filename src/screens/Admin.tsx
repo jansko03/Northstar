@@ -4,9 +4,17 @@ import { DEFAULT_USER_ID, supabase } from '../lib/supabase'
 import { useContactsWithScore } from '../lib/useContactsWithScore'
 import { color, font, kindLabel, label, radius } from '../lib/tokens'
 import { useIsMobile } from '../lib/useIsMobile'
-import type { SignalKind } from '../lib/types'
+import type { ContactWithScore, SignalKind } from '../lib/types'
 
 const ALL_KINDS: SignalKind[] = ['reaction', 'comment', 'job_change', 'funding', 'post_intent']
+
+const PHRASES: Record<SignalKind, string[]> = {
+  reaction: ['Liked your post about pricing strategy', 'Reacted to your product update'],
+  comment: ['Commented on your roadmap post', 'Left a comment asking about your services'],
+  job_change: ['Changed jobs to a new company', 'Started a new role'],
+  funding: ['Announced a new funding round', 'Their company raised a Series A'],
+  post_intent: ['Asked the network for recommendations', 'Posted looking for a consultant'],
+}
 
 const inputStyle = {
   background: color.surface,
@@ -182,6 +190,10 @@ export function Admin() {
             </div>
           )}
         </Section>
+
+        <Section title="Simulated notifications">
+          <SimulatedFeed notifyKinds={notifyKinds} watchlist={watchlist} contacts={contacts} />
+        </Section>
       </div>
 
       <div>
@@ -266,5 +278,92 @@ function ContactChip({ name, onRemove }: { name: string; onRemove: () => void })
         ×
       </button>
     </span>
+  )
+}
+
+interface SimEvent {
+  id: string
+  contactName: string
+  kind: SignalKind
+  detail: string
+  time: string
+}
+
+function SimulatedFeed({
+  notifyKinds,
+  watchlist,
+  contacts,
+}: {
+  notifyKinds: SignalKind[]
+  watchlist: ContactWithScore[]
+  contacts: ContactWithScore[]
+}) {
+  const [events, setEvents] = useState<SimEvent[]>([])
+
+  useEffect(() => {
+    const generalPool = notifyKinds.length > 0 && contacts.length > 0
+    const watchPool = watchlist.length > 0
+
+    if (!generalPool && !watchPool) return
+
+    const id = setInterval(() => {
+      const useWatchPool = generalPool && watchPool ? Math.random() < 0.5 : watchPool
+
+      let contact: ContactWithScore
+      let kind: SignalKind
+
+      if (useWatchPool) {
+        contact = watchlist[Math.floor(Math.random() * watchlist.length)]
+        kind = ALL_KINDS[Math.floor(Math.random() * ALL_KINDS.length)]
+      } else {
+        contact = contacts[Math.floor(Math.random() * contacts.length)]
+        kind = notifyKinds[Math.floor(Math.random() * notifyKinds.length)]
+      }
+
+      const phrases = PHRASES[kind]
+      const detail = phrases[Math.floor(Math.random() * phrases.length)]
+
+      setEvents((prev) =>
+        [
+          {
+            id: `${Date.now()}-${Math.random()}`,
+            contactName: contact.name,
+            kind,
+            detail,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          },
+          ...prev,
+        ].slice(0, 8),
+      )
+    }, 5000)
+
+    return () => clearInterval(id)
+  }, [notifyKinds, watchlist, contacts])
+
+  if (events.length === 0) {
+    return (
+      <span style={{ fontSize: 13, color: color.dim }}>
+        Enable a kind or watch someone to see notifications here.
+      </span>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {events.map((e) => (
+        <div key={e.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: color.text }}>
+              {e.contactName}
+            </span>
+            <span style={{ ...label, color: color.dim, fontSize: 9.5 }}>{e.time}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ ...label, color: color.accent, flexShrink: 0 }}>{kindLabel[e.kind]}</span>
+            <span style={{ fontSize: 12.5, color: color.muted }}>{e.detail}</span>
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }
