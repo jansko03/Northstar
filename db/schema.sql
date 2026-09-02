@@ -12,7 +12,8 @@ create table app_user (
   pulse_actionable_kinds text[] not null default array['job_change','funding','post_intent']
     check (pulse_actionable_kinds <@ array['reaction','comment','job_change','funding','post_intent']),
   notify_kinds text[] not null default array['comment']
-    check (notify_kinds <@ array['reaction','comment','job_change','funding','post_intent'])
+    check (notify_kinds <@ array['reaction','comment','job_change','funding','post_intent']),
+  notify_contact_ids uuid[] not null default array[]::uuid[]
 );
 
 insert into app_user (id, name, headline)
@@ -38,6 +39,9 @@ values ('00000000-0000-0000-0000-000000000001', 'Me', 'B2B consultant');
 -- column, run this instead:
 --
 -- alter table app_user alter column notify_kinds set default array['comment'];
+--
+-- alter table app_user
+--   add column notify_contact_ids uuid[] not null default array[]::uuid[];
 
 create table contact (
   id            uuid primary key default gen_random_uuid(),
