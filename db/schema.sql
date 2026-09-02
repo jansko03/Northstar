@@ -32,6 +32,12 @@ values ('00000000-0000-0000-0000-000000000001', 'Me', 'B2B consultant');
 --   add column notify_kinds text[] not null default array['comment'],
 --   add constraint app_user_notify_kinds_check
 --     check (notify_kinds <@ array['reaction','comment','job_change','funding','post_intent']);
+--
+-- If notify_kinds already exists (added before the default changed to
+-- ['comment']) and you just want the new default without re-adding the
+-- column, run this instead:
+--
+-- alter table app_user alter column notify_kinds set default array['comment'];
 
 create table contact (
   id            uuid primary key default gen_random_uuid(),
