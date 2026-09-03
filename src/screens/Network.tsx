@@ -25,7 +25,7 @@ function Pill({ text, tone }: { text: string; tone: 'accent' | 'neutral' | 'outl
     tone === 'accent'
       ? { background: color.accent, border: `1px solid ${color.accent}`, color: color.bg }
       : tone === 'neutral'
-        ? { background: 'rgba(255,255,255,.05)', border: `1px solid ${color.border}`, color: color.muted }
+        ? { background: 'rgba(255,255,255,.09)', border: '1px solid transparent', color: color.muted }
         : { background: 'transparent', border: `1px solid ${color.border}`, color: color.muted }
 
   return (
@@ -33,7 +33,7 @@ function Pill({ text, tone }: { text: string; tone: 'accent' | 'neutral' | 'outl
       style={{
         ...label,
         ...styles,
-        padding: '4px 9px',
+        padding: '4px 10px',
         borderRadius: 6,
         fontWeight: 700,
         lineHeight: 1,
@@ -44,17 +44,82 @@ function Pill({ text, tone }: { text: string; tone: 'accent' | 'neutral' | 'outl
   )
 }
 
-function touchStatus(contact: ContactWithScore): { text: string; color: string } {
+type StatusIconKind = 'zap' | 'clock' | 'alert'
+
+function StatusIcon({ kind, color: iconColor }: { kind: StatusIconKind; color: string }) {
+  const shared = {
+    width: 13,
+    height: 13,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: iconColor,
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  }
+  if (kind === 'zap') {
+    return (
+      <svg {...shared}>
+        <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    )
+  }
+  if (kind === 'alert') {
+    return (
+      <svg {...shared}>
+        <path d="M12 3 2 21h20L12 3z" />
+        <path d="M12 9v5" />
+        <path d="M12 17h.01" />
+      </svg>
+    )
+  }
+  return (
+    <svg {...shared}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  )
+}
+
+function ArrowButton() {
+  return (
+    <span
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 24,
+        height: 24,
+        borderRadius: '50%',
+        border: `1px solid ${color.border}`,
+        flexShrink: 0,
+      }}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 12h14" />
+        <path d="M13 5l7 7-7 7" />
+      </svg>
+    </span>
+  )
+}
+
+function touchStatus(contact: ContactWithScore): { text: string; color: string; icon: StatusIconKind } {
   const openEvents = contact.score?.open_events ?? 0
   if (openEvents > 0) {
-    return { text: `${openEvents} new signal${openEvents === 1 ? '' : 's'}`, color: color.accent }
+    return {
+      text: `${openEvents} new signal${openEvents === 1 ? '' : 's'}`,
+      color: color.accent,
+      icon: 'zap',
+    }
   }
   if (!contact.last_touch_at) {
-    return { text: 'No touchpoint yet', color: color.warn }
+    return { text: 'No touchpoint yet', color: color.warn, icon: 'alert' }
   }
   const isStale = contact.stage === 'dormant' || contact.stage === 'silent'
   const ago = daysAgo(contact.last_touch_at)
-  return isStale ? { text: `No touchpoint · ${ago}`, color: color.warn } : { text: `Last touch ${ago}`, color: color.muted }
+  return isStale
+    ? { text: `No touchpoint · ${ago}`, color: color.warn, icon: 'alert' }
+    : { text: `Last touch ${ago}`, color: color.muted, icon: 'clock' }
 }
 
 function ContactCard({ contact }: { contact: ContactWithScore }) {
@@ -69,22 +134,21 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 14,
-        minWidth: 272,
-        padding: 16,
+        gap: 16,
+        padding: 24,
         background: color.surface,
         border: `1px solid ${color.border}`,
-        borderRadius: radius.sm,
+        borderRadius: 12,
         textDecoration: 'none',
         color: color.text,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <div
             style={{
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               background: color.surface,
               border: `1px solid ${color.border}`,
@@ -114,8 +178,8 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
             />
           )}
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: font.body, fontSize: 15, fontWeight: 600 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontFamily: font.body, fontSize: 16, fontWeight: 600 }}>
             {contact.name}
           </div>
           {subtitle && (
@@ -133,26 +197,24 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
             </div>
           )}
         </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          {contact.contact_type !== 'unknown' && (
-            <Pill text={contactTypeLabel[contact.contact_type].toUpperCase()} tone="outline" />
-          )}
-          <Pill
-            text={stageLabel[contact.stage].toUpperCase()}
-            tone={isPositiveStage ? 'accent' : 'neutral'}
-          />
-        </div>
         {contact.score && (
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0 }}>
-            <span style={{ ...label, color: color.dim }}>{tierLabel[contact.score.tier]}</span>
-            <span style={{ fontFamily: font.mono, fontSize: 14, color: color.accent }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+            <span style={{ fontFamily: font.mono, fontSize: 15, color: color.accent }}>
               {contact.score.score}
             </span>
+            <span style={{ ...label, fontSize: 9, color: color.dim }}>{tierLabel[contact.score.tier]}</span>
           </div>
         )}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {contact.contact_type !== 'unknown' && (
+          <Pill text={contactTypeLabel[contact.contact_type].toUpperCase()} tone="outline" />
+        )}
+        <Pill
+          text={stageLabel[contact.stage].toUpperCase()}
+          tone={isPositiveStage ? 'accent' : 'neutral'}
+        />
       </div>
 
       <div
@@ -161,17 +223,17 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 10,
-          paddingTop: 12,
+          paddingTop: 16,
           borderTop: `1px solid ${color.border}`,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <StageDot stage={contact.stage} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+          <StatusIcon kind={status.icon} color={status.color} />
           <span
             style={{
-              fontFamily: font.body,
-              fontSize: 12,
-              fontWeight: 600,
+              ...label,
+              fontSize: 10.5,
+              fontWeight: 700,
               color: status.color,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -181,7 +243,7 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
             {status.text}
           </span>
         </div>
-        <span style={{ fontFamily: font.mono, fontSize: 13, color: color.dim, flexShrink: 0 }}>→</span>
+        <ArrowButton />
       </div>
     </Link>
   )
@@ -291,8 +353,9 @@ export function Network() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(292px, 1fr))',
-            gap: 22,
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+            gap: isMobile ? 16 : 24,
+            maxWidth: isMobile ? undefined : 1280,
           }}
         >
           {filtered.map((c) => (
