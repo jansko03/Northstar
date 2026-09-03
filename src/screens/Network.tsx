@@ -11,7 +11,6 @@ import {
   font,
   label,
   radius,
-  stageColor,
   stageLabel,
   surfaceGradient,
   tierLabel,
@@ -20,14 +19,22 @@ import type { ContactWithScore, Stage } from '../lib/types'
 
 type View = 'cards' | 'map'
 type SortBy = 'score' | 'last_touch' | 'name'
+type SortDir = 'asc' | 'desc'
 
-const pipelineStages: Stage[] = ['silent', 'warming', 'contacted', 'conversation']
+const allStages: Stage[] = ['silent', 'warming', 'contacted', 'conversation', 'dormant']
 const PAGE_SIZE = 9
 const sortOptions: { value: SortBy; text: string }[] = [
   { value: 'score', text: 'Score' },
   { value: 'last_touch', text: 'Last touch' },
   { value: 'name', text: 'Name' },
 ]
+// Direction a field sorts in by default when first selected — score
+// leads with the highest first, last-touch leads with the most overdue.
+const defaultSortDir: Record<SortBy, SortDir> = {
+  score: 'desc',
+  last_touch: 'asc',
+  name: 'asc',
+}
 
 function Pill({ text, tone }: { text: string; tone: 'accent' | 'neutral' | 'outline' }) {
   const styles =
@@ -264,6 +271,7 @@ export function Network() {
   const [search, setSearch] = useState('')
   const [view, setView] = useState<View>('cards')
   const [sortBy, setSortBy] = useState<SortBy>('score')
+  const [sortDir, setSortDir] = useState<SortDir>(defaultSortDir.score)
   const [page, setPage] = useState(1)
   const isMobile = useIsMobile()
 
@@ -287,20 +295,21 @@ export function Network() {
       if (!q) return true
       return c.name.toLowerCase().includes(q) || (c.company ?? '').toLowerCase().includes(q)
     })
+    const dir = sortDir === 'asc' ? 1 : -1
     const sorted = [...result]
     if (sortBy === 'name') {
-      sorted.sort((a, b) => a.name.localeCompare(b.name))
+      sorted.sort((a, b) => dir * a.name.localeCompare(b.name))
     } else if (sortBy === 'last_touch') {
       sorted.sort((a, b) => {
         const at = a.last_touch_at ? new Date(a.last_touch_at).getTime() : -Infinity
         const bt = b.last_touch_at ? new Date(b.last_touch_at).getTime() : -Infinity
-        return at - bt
+        return dir * (at - bt)
       })
     } else {
-      sorted.sort((a, b) => (b.score?.score ?? 0) - (a.score?.score ?? 0))
+      sorted.sort((a, b) => dir * ((a.score?.score ?? 0) - (b.score?.score ?? 0)))
     }
     return sorted
-  }, [contacts, stageFilter, search, sortBy])
+  }, [contacts, stageFilter, search, sortBy, sortDir])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -316,6 +325,12 @@ export function Network() {
 
   function selectSort(s: SortBy) {
     setSortBy(s)
+    setSortDir(defaultSortDir[s])
+    setPage(1)
+  }
+
+  function toggleSortDir() {
+    setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     setPage(1)
   }
 
@@ -368,18 +383,7 @@ export function Network() {
               outline: 'none',
             }}
           />
-          <FilterChip active={stageFilter === 'all'} onClick={() => selectStage('all')} text="All" count={counts.all} />
-          <FilterDivider />
-          <PipelineTabs stageFilter={stageFilter} counts={counts} onSelect={selectStage} />
-          <FilterDivider />
-          <FilterChip
-            active={stageFilter === 'dormant'}
-            onClick={() => selectStage('dormant')}
-            text={stageLabel.dormant}
-            count={counts.dormant}
-            dotColor={stageColor.dormant}
-            muted
-          />
+          <StageSelect stageFilter={stageFilter} counts={counts} onSelect={selectStage} />
           <div
             style={{
               display: 'flex',
@@ -389,7 +393,7 @@ export function Network() {
               width: isMobile ? '100%' : undefined,
             }}
           >
-            <SortToggle sortBy={sortBy} onChange={selectSort} />
+            <SortToggle sortBy={sortBy} sortDir={sortDir} onChange={selectSort} onToggleDir={toggleSortDir} />
             {!isMobile && <ViewToggle view={view} onChange={setView} />}
           </div>
         </div>
@@ -484,7 +488,17 @@ function Pagination({
   )
 }
 
-function SortToggle({ sortBy, onChange }: { sortBy: SortBy; onChange: (s: SortBy) => void }) {
+function SortToggle({
+  sortBy,
+  sortDir,
+  onChange,
+  onToggleDir,
+}: {
+  sortBy: SortBy
+  sortDir: SortDir
+  onChange: (s: SortBy) => void
+  onToggleDir: () => void
+}) {
   return (
     <div
       style={{
@@ -517,7 +531,64 @@ function SortToggle({ sortBy, onChange }: { sortBy: SortBy; onChange: (s: SortBy
           {opt.text}
         </button>
       ))}
+      <button
+        type="button"
+        onClick={onToggleDir}
+        aria-label={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+        title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 26,
+          height: 26,
+          padding: 0,
+          borderRadius: radius.sm - 4,
+          border: `1px solid ${color.border}`,
+          background: 'transparent',
+          color: color.muted,
+          cursor: 'pointer',
+          fontFamily: font.mono,
+          fontSize: 13,
+        }}
+      >
+        {sortDir === 'asc' ? '↑' : '↓'}
+      </button>
     </div>
+  )
+}
+
+function StageSelect({
+  stageFilter,
+  counts,
+  onSelect,
+}: {
+  stageFilter: Stage | 'all'
+  counts: Record<Stage | 'all', number>
+  onSelect: (s: Stage | 'all') => void
+}) {
+  return (
+    <select
+      value={stageFilter}
+      onChange={(e) => onSelect(e.target.value as Stage | 'all')}
+      style={{
+        ...label,
+        background: color.surface,
+        border: `1px solid ${color.border}`,
+        borderRadius: radius.sm,
+        padding: '10px 10px',
+        color: color.text,
+        cursor: 'pointer',
+        outline: 'none',
+      }}
+    >
+      <option value="all">All stages · {counts.all}</option>
+      {allStages.map((s) => (
+        <option key={s} value={s}>
+          {stageLabel[s]} · {counts[s]}
+        </option>
+      ))}
+    </select>
   )
 }
 
@@ -555,118 +626,3 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
   )
 }
 
-function FilterDivider() {
-  return (
-    <div
-      aria-hidden
-      style={{ width: 1, height: 18, background: 'rgba(255,255,255,.16)', flexShrink: 0, alignSelf: 'center' }}
-    />
-  )
-}
-
-function StageDot({ stage }: { stage: Stage }) {
-  return (
-    <span
-      style={{
-        width: 7,
-        height: 7,
-        borderRadius: '50%',
-        background: stageColor[stage],
-        flexShrink: 0,
-      }}
-    />
-  )
-}
-
-function FilterChip({
-  active,
-  onClick,
-  text,
-  count,
-  muted,
-  dotColor,
-}: {
-  active: boolean
-  onClick: () => void
-  text: string
-  count: number
-  muted?: boolean
-  dotColor?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        ...label,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 7,
-        padding: '8px 12px',
-        borderRadius: 999,
-        border: `1px solid ${active ? color.accent : color.border}`,
-        background: active ? 'rgba(0,255,58,.08)' : color.surface,
-        color: active ? color.accent : muted ? color.dim : color.muted,
-        cursor: 'pointer',
-      }}
-    >
-      {dotColor && (
-        <span
-          style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }}
-        />
-      )}
-      {text}
-      <span style={{ color: active ? color.accent : color.dim }}>{count}</span>
-    </button>
-  )
-}
-
-function PipelineTabs({
-  stageFilter,
-  counts,
-  onSelect,
-}: {
-  stageFilter: Stage | 'all'
-  counts: Record<Stage | 'all', number>
-  onSelect: (s: Stage) => void
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        gap: 3,
-        padding: 3,
-        background: color.surface,
-        border: `1px solid ${color.border}`,
-        borderRadius: 999,
-      }}
-    >
-      {pipelineStages.map((s) => {
-        const active = stageFilter === s
-        return (
-          <button
-            key={s}
-            type="button"
-            onClick={() => onSelect(s)}
-            style={{
-              ...label,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 7,
-              padding: '7px 11px',
-              borderRadius: 999 - 3,
-              border: 'none',
-              background: active ? 'rgba(0,255,58,.13)' : 'transparent',
-              color: active ? color.accent : color.muted,
-              cursor: 'pointer',
-            }}
-          >
-            <StageDot stage={s} />
-            {stageLabel[s]}
-            <span style={{ color: active ? color.accent : color.dim }}>{counts[s]}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
