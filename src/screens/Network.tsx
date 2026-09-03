@@ -19,9 +19,15 @@ import {
 import type { ContactWithScore, Stage } from '../lib/types'
 
 type View = 'cards' | 'map'
+type SortBy = 'score' | 'last_touch' | 'name'
 
 const pipelineStages: Stage[] = ['silent', 'warming', 'contacted', 'conversation']
 const PAGE_SIZE = 9
+const sortOptions: { value: SortBy; text: string }[] = [
+  { value: 'score', text: 'Score' },
+  { value: 'last_touch', text: 'Last touch' },
+  { value: 'name', text: 'Name' },
+]
 
 function Pill({ text, tone }: { text: string; tone: 'accent' | 'neutral' | 'outline' }) {
   const styles =
@@ -257,6 +263,7 @@ export function Network() {
   const [stageFilter, setStageFilter] = useState<Stage | 'all'>('all')
   const [search, setSearch] = useState('')
   const [view, setView] = useState<View>('cards')
+  const [sortBy, setSortBy] = useState<SortBy>('score')
   const [page, setPage] = useState(1)
   const isMobile = useIsMobile()
 
@@ -275,12 +282,25 @@ export function Network() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return contacts.filter((c) => {
+    const result = contacts.filter((c) => {
       if (stageFilter !== 'all' && c.stage !== stageFilter) return false
       if (!q) return true
       return c.name.toLowerCase().includes(q) || (c.company ?? '').toLowerCase().includes(q)
     })
-  }, [contacts, stageFilter, search])
+    const sorted = [...result]
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortBy === 'last_touch') {
+      sorted.sort((a, b) => {
+        const at = a.last_touch_at ? new Date(a.last_touch_at).getTime() : -Infinity
+        const bt = b.last_touch_at ? new Date(b.last_touch_at).getTime() : -Infinity
+        return at - bt
+      })
+    } else {
+      sorted.sort((a, b) => (b.score?.score ?? 0) - (a.score?.score ?? 0))
+    }
+    return sorted
+  }, [contacts, stageFilter, search, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -291,6 +311,11 @@ export function Network() {
 
   function selectStage(s: Stage | 'all') {
     setStageFilter(s)
+    setPage(1)
+  }
+
+  function selectSort(s: SortBy) {
+    setSortBy(s)
     setPage(1)
   }
 
@@ -314,54 +339,60 @@ export function Network() {
             {counts.all} {counts.all === 1 ? 'contact' : 'contacts'}
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', width: isMobile ? '100%' : undefined }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'stretch' : 'center',
+            flexWrap: 'wrap',
+            gap: 10,
+          }}
+        >
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder="Search name or company"
+            style={{
+              background: color.surface,
+              border: `1px solid ${color.border}`,
+              borderRadius: radius.sm,
+              padding: '10px 14px',
+              color: color.text,
+              fontFamily: font.body,
+              fontSize: 13,
+              minWidth: isMobile ? undefined : 220,
+              width: isMobile ? '100%' : undefined,
+              outline: 'none',
+            }}
+          />
+          <FilterChip active={stageFilter === 'all'} onClick={() => selectStage('all')} text="All" count={counts.all} />
+          <FilterDivider />
+          <PipelineTabs stageFilter={stageFilter} counts={counts} onSelect={selectStage} />
+          <FilterDivider />
+          <FilterChip
+            active={stageFilter === 'dormant'}
+            onClick={() => selectStage('dormant')}
+            text={stageLabel.dormant}
+            count={counts.dormant}
+            dotColor={stageColor.dormant}
+            muted
+          />
           <div
             style={{
               display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'stretch' : 'center',
+              alignItems: 'center',
               gap: 10,
+              marginLeft: isMobile ? undefined : 'auto',
               width: isMobile ? '100%' : undefined,
             }}
           >
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-              placeholder="Search name or company"
-              style={{
-                background: color.surface,
-                border: `1px solid ${color.border}`,
-                borderRadius: radius.sm,
-                padding: '10px 14px',
-                color: color.text,
-                fontFamily: font.body,
-                fontSize: 13,
-                minWidth: isMobile ? undefined : 280,
-                width: isMobile ? '100%' : undefined,
-                outline: 'none',
-              }}
-            />
+            <SortToggle sortBy={sortBy} onChange={selectSort} />
             {!isMobile && <ViewToggle view={view} onChange={setView} />}
           </div>
         </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <FilterChip active={stageFilter === 'all'} onClick={() => selectStage('all')} text="All" count={counts.all} />
-        <FilterDivider />
-        <PipelineTabs stageFilter={stageFilter} counts={counts} onSelect={selectStage} />
-        <FilterDivider />
-        <FilterChip
-          active={stageFilter === 'dormant'}
-          onClick={() => selectStage('dormant')}
-          text={stageLabel.dormant}
-          count={counts.dormant}
-          dotColor={stageColor.dormant}
-          muted
-        />
       </div>
 
       {loading && <div style={{ ...label, color: color.muted }}>Loading…</div>}
@@ -449,6 +480,43 @@ function Pagination({
       >
         ›
       </button>
+    </div>
+  )
+}
+
+function SortToggle({ sortBy, onChange }: { sortBy: SortBy; onChange: (s: SortBy) => void }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: 4,
+        background: color.surface,
+        border: `1px solid ${color.border}`,
+        borderRadius: radius.sm,
+      }}
+    >
+      <span style={{ ...label, color: color.dim, padding: '0 0 0 6px' }}>Sort</span>
+      {sortOptions.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          style={{
+            ...label,
+            padding: '6px 10px',
+            borderRadius: radius.sm - 4,
+            border: 'none',
+            background: sortBy === opt.value ? 'rgba(0,255,58,.13)' : 'transparent',
+            color: sortBy === opt.value ? color.accent : color.muted,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {opt.text}
+        </button>
+      ))}
     </div>
   )
 }
