@@ -394,7 +394,7 @@ export function Import() {
               {manualSaving ? 'Adding…' : 'Add contact'}
             </button>
             {manualMessage && (
-              <span style={{ ...label, color: manualMessage.isError ? color.lime : color.accent }}>
+              <span style={{ ...label, color: manualMessage.isError ? color.warn : color.accent }}>
                 {manualMessage.text}
               </span>
             )}
@@ -422,7 +422,7 @@ export function Import() {
                 style={{
                   border: `1px dashed ${dragOver ? color.accent : color.border}`,
                   borderRadius: radius.sm,
-                  background: dragOver ? 'rgba(79,227,155,.06)' : 'rgba(255,255,255,.02)',
+                  background: dragOver ? 'rgba(0,255,58,.06)' : 'rgba(255,255,255,.02)',
                   padding: 40,
                   textAlign: 'center',
                   cursor: 'pointer',
@@ -446,7 +446,7 @@ export function Import() {
             </Section>
           )}
 
-          {parseError && <div style={{ ...label, color: color.lime }}>Could not parse CSV: {parseError}</div>}
+          {parseError && <div style={{ ...label, color: color.warn }}>Could not parse CSV: {parseError}</div>}
 
           {hasFile && (
             <Section title="Map & import">
@@ -503,7 +503,7 @@ export function Import() {
                 </div>
               )}
               {!mapping.name || !mapping.linkedin_url ? (
-                <div style={{ ...label, color: color.lime }}>Map at least Name and LinkedIn URL to import.</div>
+                <div style={{ ...label, color: color.warn }}>Map at least Name and LinkedIn URL to import.</div>
               ) : null}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -577,7 +577,7 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
             padding: '7px 14px',
             borderRadius: radius.sm - 4,
             border: 'none',
-            background: mode === m ? 'rgba(79,227,155,.13)' : 'transparent',
+            background: mode === m ? 'rgba(0,255,58,.13)' : 'transparent',
             color: mode === m ? color.accent : color.muted,
             cursor: 'pointer',
           }}
@@ -702,7 +702,7 @@ function Dropdown({
                   fontFamily: font.body,
                   fontSize: 13,
                   color: isSelected ? color.accent : color.text,
-                  background: isSelected ? 'rgba(79,227,155,.1)' : isHovered ? 'rgba(255,255,255,.05)' : 'transparent',
+                  background: isSelected ? 'rgba(0,255,58,.1)' : isHovered ? 'rgba(255,255,255,.05)' : 'transparent',
                 }}
               >
                 {o.label}

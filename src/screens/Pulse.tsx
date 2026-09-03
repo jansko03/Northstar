@@ -104,7 +104,7 @@ export function Pulse() {
   if (error) {
     return (
       <div style={{ padding: isMobile ? 16 : 32 }}>
-        <span style={{ ...label, color: color.lime }}>Could not load signals: {error}</span>
+        <span style={{ ...label, color: color.warn }}>Could not load signals: {error}</span>
       </div>
     )
   }
@@ -112,7 +112,7 @@ export function Pulse() {
   return (
     <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
       {actionError && (
-        <span style={{ ...label, color: color.lime }}>{actionError}</span>
+        <span style={{ ...label, color: color.warn }}>{actionError}</span>
       )}
       <div
         style={{
@@ -222,8 +222,8 @@ function SignalCard({ signal, onDone }: { signal: SignalWithContact; onDone: (id
           style={{
             ...label,
             padding: '6px 10px',
-            background: 'rgba(79,227,155,.11)',
-            border: '1px solid rgba(79,227,155,.34)',
+            background: 'rgba(0,255,58,.11)',
+            border: '1px solid rgba(0,255,58,.34)',
             borderRadius: radius.sm - 6,
             color: color.accent,
             cursor: 'pointer',

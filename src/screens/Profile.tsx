@@ -277,8 +277,8 @@ export function Profile() {
                 ...label,
                 padding: '10px',
                 textAlign: 'center',
-                background: 'rgba(79,227,155,.11)',
-                border: `1px solid rgba(79,227,155,.34)`,
+                background: 'rgba(0,255,58,.11)',
+                border: `1px solid rgba(0,255,58,.34)`,
                 borderRadius: radius.sm,
                 color: color.accent,
                 cursor: saving ? 'default' : 'pointer',
@@ -364,7 +364,7 @@ export function Profile() {
                 borderRadius: 11,
               }}
             >
-              <span style={{ ...label, fontSize: 9.5, color: color.lime }}>Comments</span>
+              <span style={{ ...label, fontSize: 9.5, color: color.muted }}>Comments</span>
               <span style={{ fontSize: 20, fontWeight: 600, lineHeight: 1 }}>{week?.comments ?? 0}</span>
             </div>
             <div
@@ -392,7 +392,7 @@ export function Profile() {
                 borderRadius: 11,
               }}
             >
-              <span style={{ ...label, fontSize: 9.5, color: color.lime }}>Notes you added</span>
+              <span style={{ ...label, fontSize: 9.5, color: color.muted }}>Notes you added</span>
               <span style={{ fontSize: 20, fontWeight: 600, lineHeight: 1 }}>{week?.notesAdded ?? 0}</span>
             </div>
           </div>

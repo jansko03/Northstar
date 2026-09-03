@@ -28,15 +28,10 @@ function NavLinks({ mobile }: { mobile: boolean }) {
             padding: mobile ? '10px 6px' : '7px 14px',
             borderRadius: mobile ? 10 : 11,
             border: link.temp ? `1px dashed ${color.border}` : 'none',
-            color: link.temp ? color.dim : isActive ? color.accent : color.muted,
-            background:
-              !link.temp && isActive
-                ? 'linear-gradient(180deg, rgba(79,227,155,.19), rgba(79,227,155,.07))'
-                : 'transparent',
-            boxShadow:
-              !link.temp && isActive
-                ? '0 1px 0 rgba(255,255,255,.07) inset, 0 6px 18px -12px rgba(79,227,155,.7)'
-                : 'none',
+            fontWeight: !link.temp && isActive ? 700 : 500,
+            color: link.temp ? color.dim : isActive ? color.bg : color.muted,
+            background: !link.temp && isActive ? color.accent : 'transparent',
+            boxShadow: 'none',
             textDecoration: 'none',
           })}
         >
@@ -56,7 +51,7 @@ function Wordmark({ dotSize, fontSize }: { dotSize: number; fontSize: number }) 
           height: dotSize,
           borderRadius: '50%',
           background: color.accent,
-          boxShadow: '0 0 14px 2px rgba(79,227,155,.55)',
+          boxShadow: '0 0 14px 2px rgba(0,255,58,.55)',
         }}
       />
       <span

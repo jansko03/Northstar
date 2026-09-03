@@ -194,7 +194,7 @@ export function Network() {
 
       {loading && <div style={{ ...label, color: color.muted }}>Loading…</div>}
       {error && (
-        <div style={{ ...label, color: color.lime }}>
+        <div style={{ ...label, color: color.warn }}>
           Could not load contacts: {error}
         </div>
       )}
@@ -243,7 +243,7 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
             padding: '6px 12px',
             borderRadius: radius.sm - 4,
             border: 'none',
-            background: view === v ? 'rgba(79,227,155,.13)' : 'transparent',
+            background: view === v ? 'rgba(0,255,58,.13)' : 'transparent',
             color: view === v ? color.accent : color.muted,
             cursor: 'pointer',
           }}
@@ -305,7 +305,7 @@ function FilterChip({
         padding: '8px 12px',
         borderRadius: 999,
         border: `1px solid ${active ? color.accent : color.border}`,
-        background: active ? 'rgba(79,227,155,.08)' : color.surface,
+        background: active ? 'rgba(0,255,58,.08)' : color.surface,
         color: active ? color.accent : muted ? color.dim : color.muted,
         cursor: 'pointer',
       }}
@@ -356,7 +356,7 @@ function PipelineTabs({
               padding: '7px 11px',
               borderRadius: 999 - 3,
               border: 'none',
-              background: active ? 'rgba(79,227,155,.13)' : 'transparent',
+              background: active ? 'rgba(0,255,58,.13)' : 'transparent',
               color: active ? color.accent : color.muted,
               cursor: 'pointer',
             }}

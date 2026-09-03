@@ -119,7 +119,7 @@ export function ContactDetail() {
   if (notFound || !contact) {
     return (
       <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <span style={{ ...label, color: color.lime }}>Contact not found.</span>
+        <span style={{ ...label, color: color.warn }}>Contact not found.</span>
         <Link to="/network" style={{ ...label, color: color.accent }}>
           ← Back to network
         </Link>
@@ -236,8 +236,8 @@ export function ContactDetail() {
                 ...label,
                 padding: '12px',
                 textAlign: 'center',
-                background: 'rgba(79,227,155,.11)',
-                border: `1px solid rgba(79,227,155,.34)`,
+                background: 'rgba(0,255,58,.11)',
+                border: `1px solid rgba(0,255,58,.34)`,
                 borderRadius: radius.sm,
                 color: color.accent,
                 textDecoration: 'none',
@@ -317,7 +317,7 @@ export function ContactDetail() {
                     borderRadius: 10,
                     cursor: 'pointer',
                     textAlign: 'left',
-                    background: isCurrent ? 'rgba(79,227,155,.09)' : color.surface,
+                    background: isCurrent ? 'rgba(0,255,58,.09)' : color.surface,
                     border: `1px solid ${isCurrent ? color.accent : color.border}`,
                   }}
                 >
@@ -336,7 +336,7 @@ export function ContactDetail() {
                         flex: 1,
                         height: 2,
                         borderRadius: 2,
-                        background: isCurrent || isPast ? 'rgba(79,227,155,.28)' : color.border,
+                        background: isCurrent || isPast ? 'rgba(0,255,58,.28)' : color.border,
                       }}
                     />
                   </div>
@@ -463,8 +463,8 @@ export function ContactDetail() {
                 style={{
                   ...label,
                   padding: '9px 14px',
-                  background: 'rgba(79,227,155,.11)',
-                  border: `1px solid rgba(79,227,155,.34)`,
+                  background: 'rgba(0,255,58,.11)',
+                  border: `1px solid rgba(0,255,58,.34)`,
                   borderRadius: radius.sm,
                   color: color.accent,
                   cursor: savingNote ? 'default' : 'pointer',
@@ -525,8 +525,8 @@ export function ContactDetail() {
                 style={{
                   ...label,
                   padding: '9px 14px',
-                  background: 'rgba(79,227,155,.11)',
-                  border: `1px solid rgba(79,227,155,.34)`,
+                  background: 'rgba(0,255,58,.11)',
+                  border: `1px solid rgba(0,255,58,.34)`,
                   borderRadius: radius.sm,
                   color: color.accent,
                   cursor: savingEvent ? 'default' : 'pointer',
