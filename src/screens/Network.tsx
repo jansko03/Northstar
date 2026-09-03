@@ -1,18 +1,66 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { NetworkMap } from '../components/NetworkMap'
-import { initials } from '../lib/format'
+import { daysAgo, initials } from '../lib/format'
 import { useContactsWithScore } from '../lib/useContactsWithScore'
 import { useIsMobile } from '../lib/useIsMobile'
-import { color, font, label, radius, stageColor, stageLabel, tierLabel } from '../lib/tokens'
+import {
+  color,
+  contactTypeLabel,
+  font,
+  label,
+  radius,
+  stageColor,
+  stageLabel,
+  tierLabel,
+} from '../lib/tokens'
 import type { ContactWithScore, Stage } from '../lib/types'
 
 type View = 'cards' | 'map'
 
 const pipelineStages: Stage[] = ['silent', 'warming', 'contacted', 'conversation']
 
+function Pill({ text, tone }: { text: string; tone: 'accent' | 'neutral' | 'outline' }) {
+  const styles =
+    tone === 'accent'
+      ? { background: color.accent, border: `1px solid ${color.accent}`, color: color.bg }
+      : tone === 'neutral'
+        ? { background: 'rgba(255,255,255,.05)', border: `1px solid ${color.border}`, color: color.muted }
+        : { background: 'transparent', border: `1px solid ${color.border}`, color: color.muted }
+
+  return (
+    <span
+      style={{
+        ...label,
+        ...styles,
+        padding: '4px 9px',
+        borderRadius: 6,
+        fontWeight: 700,
+        lineHeight: 1,
+      }}
+    >
+      {text}
+    </span>
+  )
+}
+
+function touchStatus(contact: ContactWithScore): { text: string; color: string } {
+  const openEvents = contact.score?.open_events ?? 0
+  if (openEvents > 0) {
+    return { text: `${openEvents} new signal${openEvents === 1 ? '' : 's'}`, color: color.accent }
+  }
+  if (!contact.last_touch_at) {
+    return { text: 'No touchpoint yet', color: color.warn }
+  }
+  const isStale = contact.stage === 'dormant' || contact.stage === 'silent'
+  const ago = daysAgo(contact.last_touch_at)
+  return isStale ? { text: `No touchpoint · ${ago}`, color: color.warn } : { text: `Last touch ${ago}`, color: color.muted }
+}
+
 function ContactCard({ contact }: { contact: ContactWithScore }) {
   const subtitle = [contact.role_title, contact.company].filter(Boolean).join(' · ')
+  const status = touchStatus(contact)
+  const isPositiveStage = contact.stage === 'contacted' || contact.stage === 'conversation'
 
   return (
     <Link
@@ -21,37 +69,53 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: 14,
         minWidth: 272,
-        padding: 18,
+        padding: 16,
         background: color.surface,
         border: `1px solid ${color.border}`,
-        borderRadius: radius.lg,
+        borderRadius: radius.sm,
         textDecoration: 'none',
         color: color.text,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            background: color.surface,
-            border: `1px solid ${color.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: font.mono,
-            fontSize: 13,
-            color: color.accent,
-            flexShrink: 0,
-          }}
-        >
-          {initials(contact.name)}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              background: color.surface,
+              border: `1px solid ${color.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: font.mono,
+              fontSize: 13,
+              color: color.accent,
+            }}
+          >
+            {initials(contact.name)}
+          </div>
+          {(contact.score?.open_events ?? 0) > 0 && (
+            <span
+              className="ns-pulse-dot"
+              style={{
+                position: 'absolute',
+                top: -2,
+                right: -2,
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: color.accent,
+                border: `2px solid ${color.bg}`,
+              }}
+            />
+          )}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: font.body, fontSize: 15, fontWeight: 500 }}>
+          <div style={{ fontFamily: font.body, fontSize: 15, fontWeight: 600 }}>
             {contact.name}
           </div>
           {subtitle && (
@@ -69,34 +133,55 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
             </div>
           )}
         </div>
-        {(contact.score?.open_events ?? 0) > 0 && (
-          <span
-            className="ns-pulse-dot"
-            style={{
-              marginLeft: 'auto',
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: color.accent,
-              flexShrink: 0,
-            }}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {contact.contact_type !== 'unknown' && (
+            <Pill text={contactTypeLabel[contact.contact_type].toUpperCase()} tone="outline" />
+          )}
+          <Pill
+            text={stageLabel[contact.stage].toUpperCase()}
+            tone={isPositiveStage ? 'accent' : 'neutral'}
           />
+        </div>
+        {contact.score && (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0 }}>
+            <span style={{ ...label, color: color.dim }}>{tierLabel[contact.score.tier]}</span>
+            <span style={{ fontFamily: font.mono, fontSize: 14, color: color.accent }}>
+              {contact.score.score}
+            </span>
+          </div>
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          paddingTop: 12,
+          borderTop: `1px solid ${color.border}`,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <StageDot stage={contact.stage} />
-          <span style={{ ...label, color: color.muted }}>{stageLabel[contact.stage]}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          {contact.score && (
-            <span style={{ ...label, color: color.dim }}>{tierLabel[contact.score.tier]}</span>
-          )}
-          <span style={{ fontFamily: font.mono, fontSize: 15, color: color.accent }}>
-            {contact.score?.score ?? '—'}
+          <span
+            style={{
+              fontFamily: font.body,
+              fontSize: 12,
+              fontWeight: 600,
+              color: status.color,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {status.text}
           </span>
         </div>
+        <span style={{ fontFamily: font.mono, fontSize: 13, color: color.dim, flexShrink: 0 }}>→</span>
       </div>
     </Link>
   )

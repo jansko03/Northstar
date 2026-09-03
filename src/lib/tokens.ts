@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import type { SignalKind, Stage, Tier } from './types'
+import type { ContactType, SignalKind, Stage, Tier } from './types'
 
 export const color = {
   bg: '#131313',
@@ -71,6 +71,14 @@ export const tierColor: Record<Tier, string> = {
   keep_warm: color.text,
   nurture: color.muted,
   parked: color.dim,
+}
+
+export const contactTypeLabel: Record<ContactType, string> = {
+  client: 'Client',
+  partner: 'Partner',
+  channel: 'Channel',
+  peer: 'Peer',
+  unknown: 'Unknown',
 }
 
 export const kindLabel: Record<SignalKind, string> = {
