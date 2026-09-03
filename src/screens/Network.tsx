@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { NetworkMap } from '../components/NetworkMap'
@@ -12,6 +13,7 @@ import {
   radius,
   stageColor,
   stageLabel,
+  surfaceGradient,
   tierLabel,
 } from '../lib/tokens'
 import type { ContactWithScore, Stage } from '../lib/types'
@@ -19,6 +21,7 @@ import type { ContactWithScore, Stage } from '../lib/types'
 type View = 'cards' | 'map'
 
 const pipelineStages: Stage[] = ['silent', 'warming', 'contacted', 'conversation']
+const PAGE_SIZE = 9
 
 function Pill({ text, tone }: { text: string; tone: 'accent' | 'neutral' | 'outline' }) {
   const styles =
@@ -136,7 +139,7 @@ function ContactCard({ contact }: { contact: ContactWithScore }) {
         flexDirection: 'column',
         gap: 16,
         padding: 24,
-        background: color.surface,
+        background: surfaceGradient,
         border: `1px solid ${color.border}`,
         borderRadius: 12,
         textDecoration: 'none',
@@ -254,6 +257,7 @@ export function Network() {
   const [stageFilter, setStageFilter] = useState<Stage | 'all'>('all')
   const [search, setSearch] = useState('')
   const [view, setView] = useState<View>('cards')
+  const [page, setPage] = useState(1)
   const isMobile = useIsMobile()
 
   const counts = useMemo(() => {
@@ -278,17 +282,21 @@ export function Network() {
     })
   }, [contacts, stageFilter, search])
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paged = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage],
+  )
+
+  function selectStage(s: Stage | 'all') {
+    setStageFilter(s)
+    setPage(1)
+  }
+
   return (
     <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: isMobile ? 'stretch' : 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <div style={{ fontFamily: font.body, fontSize: 20, fontWeight: 600, color: color.text }}>
             Network
@@ -297,41 +305,49 @@ export function Network() {
             {counts.all} {counts.all === 1 ? 'contact' : 'contacts'}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name or company"
+        <div style={{ display: 'flex', justifyContent: 'center', width: isMobile ? '100%' : undefined }}>
+          <div
             style={{
-              background: color.surface,
-              border: `1px solid ${color.border}`,
-              borderRadius: radius.sm,
-              padding: '10px 14px',
-              color: color.text,
-              fontFamily: font.body,
-              fontSize: 13,
-              minWidth: isMobile ? undefined : 220,
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'stretch' : 'center',
+              gap: 10,
               width: isMobile ? '100%' : undefined,
-              outline: 'none',
             }}
-          />
-          {!isMobile && <ViewToggle view={view} onChange={setView} />}
+          >
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              placeholder="Search name or company"
+              style={{
+                background: color.surface,
+                border: `1px solid ${color.border}`,
+                borderRadius: radius.sm,
+                padding: '10px 14px',
+                color: color.text,
+                fontFamily: font.body,
+                fontSize: 13,
+                minWidth: isMobile ? undefined : 280,
+                width: isMobile ? '100%' : undefined,
+                outline: 'none',
+              }}
+            />
+            {!isMobile && <ViewToggle view={view} onChange={setView} />}
+          </div>
         </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <FilterChip
-          active={stageFilter === 'all'}
-          onClick={() => setStageFilter('all')}
-          text="All"
-          count={counts.all}
-        />
+        <FilterChip active={stageFilter === 'all'} onClick={() => selectStage('all')} text="All" count={counts.all} />
         <FilterDivider />
-        <PipelineTabs stageFilter={stageFilter} counts={counts} onSelect={setStageFilter} />
+        <PipelineTabs stageFilter={stageFilter} counts={counts} onSelect={selectStage} />
         <FilterDivider />
         <FilterChip
           active={stageFilter === 'dormant'}
-          onClick={() => setStageFilter('dormant')}
+          onClick={() => selectStage('dormant')}
           text={stageLabel.dormant}
           count={counts.dormant}
           dotColor={stageColor.dormant}
@@ -350,21 +366,81 @@ export function Network() {
       )}
 
       {isMobile || view === 'cards' ? (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
-            gap: isMobile ? 16 : 24,
-            maxWidth: isMobile ? undefined : 1280,
-          }}
-        >
-          {filtered.map((c) => (
-            <ContactCard key={c.id} contact={c} />
-          ))}
-        </div>
+        <>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+              gap: isMobile ? 16 : 24,
+              maxWidth: isMobile ? undefined : 1280,
+            }}
+          >
+            {paged.map((c) => (
+              <ContactCard key={c.id} contact={c} />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
+          )}
+        </>
       ) : (
         <NetworkMap contacts={filtered} />
       )}
+    </div>
+  )
+}
+
+function Pagination({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number
+  totalPages: number
+  onChange: (p: number) => void
+}) {
+  const pageButtonStyle = (active: boolean): CSSProperties => ({
+    ...label,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 30,
+    height: 30,
+    padding: '0 8px',
+    borderRadius: radius.sm - 2,
+    border: `1px solid ${active ? color.accent : color.border}`,
+    background: active ? color.accent : color.surface,
+    color: active ? color.bg : color.muted,
+    cursor: 'pointer',
+  })
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+      <button
+        type="button"
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+        style={{ ...pageButtonStyle(false), opacity: page <= 1 ? 0.4 : 1, cursor: page <= 1 ? 'default' : 'pointer' }}
+      >
+        ‹
+      </button>
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+        <button key={p} type="button" onClick={() => onChange(p)} style={pageButtonStyle(p === page)}>
+          {p}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages}
+        style={{
+          ...pageButtonStyle(false),
+          opacity: page >= totalPages ? 0.4 : 1,
+          cursor: page >= totalPages ? 'default' : 'pointer',
+        }}
+      >
+        ›
+      </button>
     </div>
   )
 }

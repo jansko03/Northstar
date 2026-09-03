@@ -4,6 +4,7 @@ import type { ContactType, SignalKind, Stage, Tier } from './types'
 export const color = {
   bg: '#131313',
   surface: 'rgba(255,255,255,.04)',
+  card: '#0C0C0C',
   border: 'rgba(255,255,255,.08)',
   text: '#E9EDE9',
   muted: '#8A928B',
@@ -12,9 +13,9 @@ export const color = {
   warn: '#FF4D4D',
 } as const
 
-// Flat card fill — no gradient/drop shadow, just a thin border, to match
-// the sharper reference look.
-export const surfaceGradient = 'rgba(255,255,255,.035)'
+// Flat card fill — solid near-black, no gradient/drop shadow, just a thin
+// border, to match the reference look.
+export const surfaceGradient = color.card
 export const cardShadow = 'none'
 
 export const radius = {
