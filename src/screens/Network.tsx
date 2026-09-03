@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { NetworkMap } from '../components/NetworkMap'
 import { daysAgo, initials } from '../lib/format'
@@ -11,6 +11,7 @@ import {
   font,
   label,
   radius,
+  stageColor,
   stageLabel,
   surfaceGradient,
   tierLabel,
@@ -567,28 +568,149 @@ function StageSelect({
   counts: Record<Stage | 'all', number>
   onSelect: (s: Stage | 'all') => void
 }) {
+  const [open, setOpen] = useState(false)
+  const [hovered, setHovered] = useState<Stage | 'all' | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: MouseEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  const options: (Stage | 'all')[] = ['all', ...allStages]
+  const activeText = stageFilter === 'all' ? 'All stages' : stageLabel[stageFilter]
+
   return (
-    <select
-      value={stageFilter}
-      onChange={(e) => onSelect(e.target.value as Stage | 'all')}
-      style={{
-        ...label,
-        background: color.surface,
-        border: `1px solid ${color.border}`,
-        borderRadius: radius.sm,
-        padding: '10px 10px',
-        color: color.text,
-        cursor: 'pointer',
-        outline: 'none',
-      }}
-    >
-      <option value="all">All stages · {counts.all}</option>
-      {allStages.map((s) => (
-        <option key={s} value={s}>
-          {stageLabel[s]} · {counts[s]}
-        </option>
-      ))}
-    </select>
+    <div ref={rootRef} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        style={{
+          ...label,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          height: 39,
+          padding: '0 12px',
+          background: color.surface,
+          border: `1px solid ${open ? color.accent : color.border}`,
+          borderRadius: radius.sm,
+          color: open ? color.accent : color.text,
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {stageFilter !== 'all' && (
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: stageColor[stageFilter],
+              flexShrink: 0,
+            }}
+          />
+        )}
+        {activeText}
+        <span style={{ color: color.dim }}>{counts[stageFilter]}</span>
+        <svg
+          width="11"
+          height="11"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ marginLeft: 2, transform: open ? 'rotate(180deg)' : undefined }}
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            left: 0,
+            zIndex: 50,
+            minWidth: '100%',
+            padding: 4,
+            background: color.card,
+            border: `1px solid ${color.border}`,
+            borderRadius: radius.sm,
+            boxShadow: '0 18px 40px -20px rgba(0,0,0,1)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+          }}
+        >
+          {options.map((opt) => {
+            const active = opt === stageFilter
+            return (
+              <button
+                key={opt}
+                type="button"
+                role="option"
+                aria-selected={active}
+                onClick={() => {
+                  onSelect(opt)
+                  setOpen(false)
+                }}
+                onMouseEnter={() => setHovered(opt)}
+                onMouseLeave={() => setHovered(null)}
+                style={{
+                  ...label,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 10px',
+                  borderRadius: radius.sm - 4,
+                  border: 'none',
+                  background: active
+                    ? 'rgba(0,255,58,.13)'
+                    : hovered === opt
+                      ? 'rgba(255,255,255,.05)'
+                      : 'transparent',
+                  color: active ? color.accent : color.muted,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'left',
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: opt === 'all' ? 'transparent' : stageColor[opt],
+                    border: opt === 'all' ? `1px solid ${color.dim}` : undefined,
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ flex: 1 }}>{opt === 'all' ? 'All stages' : stageLabel[opt]}</span>
+                <span style={{ color: active ? color.accent : color.dim }}>{counts[opt]}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 
