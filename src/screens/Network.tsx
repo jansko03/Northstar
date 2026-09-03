@@ -295,7 +295,16 @@ export function Network() {
   }
 
   return (
-    <div style={{ padding: isMobile ? 16 : 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div
+      style={{
+        padding: isMobile ? 16 : 32,
+        maxWidth: isMobile ? undefined : 1344,
+        margin: isMobile ? undefined : '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 24,
+      }}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <div style={{ fontFamily: font.body, fontSize: 20, fontWeight: 600, color: color.text }}>
@@ -372,7 +381,6 @@ export function Network() {
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
               gap: isMobile ? 16 : 24,
-              maxWidth: isMobile ? undefined : 1280,
             }}
           >
             {paged.map((c) => (
