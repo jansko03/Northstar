@@ -27,6 +27,8 @@ export interface Signal {
   detail: string | null
   occurred_at: string
   handled_at: string | null
+  /** True for rows made by Admin > Sample data. */
+  generated: boolean
   created_at: string
 }
 

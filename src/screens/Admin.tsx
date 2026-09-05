@@ -9,12 +9,47 @@ import type { ContactWithScore, SignalKind } from '../lib/types'
 const ALL_KINDS: SignalKind[] = ['reaction', 'comment', 'job_change', 'funding', 'post_intent']
 
 const PHRASES: Record<SignalKind, string[]> = {
-  reaction: ['Liked your post about pricing strategy', 'Reacted to your product update'],
-  comment: ['Commented on your roadmap post', 'Left a comment asking about your services'],
-  job_change: ['Changed jobs to a new company', 'Started a new role'],
-  funding: ['Announced a new funding round', 'Their company raised a Series A'],
-  post_intent: ['Asked the network for recommendations', 'Posted looking for a consultant'],
+  reaction: [
+    'Liked your post about pricing strategy',
+    'Reacted to your product update',
+    'Liked your case study write-up',
+    'Reacted to your hiring announcement',
+    'Liked your post on discovery calls',
+  ],
+  comment: [
+    'Commented on your roadmap post',
+    'Left a comment asking about your services',
+    'Replied to your thread on retainers',
+    'Commented asking for the full deck',
+    'Left a comment about your pricing model',
+  ],
+  job_change: [
+    'Changed jobs to a new company',
+    'Started a new role',
+    'Moved into a Head of Ops role',
+    'Left to join a competitor',
+    'Promoted to VP',
+  ],
+  funding: [
+    'Announced a new funding round',
+    'Their company raised a Series A',
+    'Closed a seed extension',
+    'Raised a Series B led by a growth fund',
+    'Announced a bridge round',
+  ],
+  post_intent: [
+    'Asked the network for recommendations',
+    'Posted looking for a consultant',
+    'Asked who to talk to about onboarding',
+    'Posted about scaling their ops team',
+    'Asked for tooling suggestions',
+  ],
 }
+
+// How many signals one press of "Populate signals" inserts, and how far back
+// occurred_at is scattered so they land inside the Pulse "This week" table.
+const POPULATE_COUNT = 8
+const POPULATE_WINDOW_DAYS = 7
 
 const inputStyle = {
   background: color.surface,
@@ -194,6 +229,10 @@ export function Admin() {
         <Section title="Simulated notifications">
           <SimulatedFeed notifyKinds={notifyKinds} watchlist={watchlist} contacts={contacts} />
         </Section>
+
+        <Section title="Sample data">
+          <SampleData contacts={contacts} />
+        </Section>
       </div>
 
       <div>
@@ -278,6 +317,124 @@ function ContactChip({ name, onRemove }: { name: string; onRemove: () => void })
         ×
       </button>
     </span>
+  )
+}
+
+function randomDateWithinWindow(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - Math.floor(Math.random() * POPULATE_WINDOW_DAYS))
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Inserts and removes throwaway `signal` rows so the Pulse columns and week
+ * table have something to show. Only rows flagged `generated` are ever
+ * deleted, so imported signals are safe.
+ */
+function SampleData({ contacts }: { contacts: ContactWithScore[] }) {
+  const [busy, setBusy] = useState<'populate' | 'clear' | null>(null)
+  const [status, setStatus] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  const contactIds = useMemo(() => contacts.map((c) => c.id), [contacts])
+
+  async function populate() {
+    setBusy('populate')
+    setStatus(null)
+
+    const rows = Array.from({ length: POPULATE_COUNT }, () => {
+      const kind = ALL_KINDS[Math.floor(Math.random() * ALL_KINDS.length)]
+      return {
+        contact_id: contactIds[Math.floor(Math.random() * contactIds.length)],
+        kind,
+        detail: PHRASES[kind][Math.floor(Math.random() * PHRASES[kind].length)],
+        occurred_at: randomDateWithinWindow(),
+        generated: true,
+      }
+    })
+
+    const { error } = await supabase.from('signal').insert(rows)
+
+    setFailed(Boolean(error))
+    setStatus(error ? `Could not insert: ${error.message}` : `Added ${rows.length} signals. Open Pulse to see them.`)
+    setBusy(null)
+  }
+
+  async function clearGenerated() {
+    setBusy('clear')
+    setStatus(null)
+
+    const { error, count } = await supabase
+      .from('signal')
+      .delete({ count: 'exact' })
+      .eq('generated', true)
+      .in('contact_id', contactIds)
+
+    setFailed(Boolean(error))
+    setStatus(error ? `Could not clear: ${error.message}` : `Removed ${count ?? 0} generated signals.`)
+    setBusy(null)
+  }
+
+  const enabled = contactIds.length > 0 && busy === null
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+      <span style={{ fontSize: 13, color: color.muted, lineHeight: 1.5 }}>
+        Throwaway signals across all kinds, dated within the last {POPULATE_WINDOW_DAYS} days, so Pulse has
+        something to show.
+      </span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <ActionButton
+          text={busy === 'populate' ? 'Adding…' : 'Populate signals'}
+          onClick={populate}
+          enabled={enabled}
+          accent
+        />
+        <ActionButton
+          text={busy === 'clear' ? 'Clearing…' : 'Clear generated'}
+          onClick={clearGenerated}
+          enabled={enabled}
+        />
+      </div>
+      {contactIds.length === 0 ? (
+        <span style={{ fontSize: 12, color: color.dim }}>Import some contacts first.</span>
+      ) : (
+        status && (
+          <span style={{ fontSize: 12, color: failed ? color.warn : color.dim, lineHeight: 1.5 }}>{status}</span>
+        )
+      )}
+    </div>
+  )
+}
+
+function ActionButton({
+  text,
+  onClick,
+  enabled,
+  accent,
+}: {
+  text: string
+  onClick: () => void
+  enabled: boolean
+  accent?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!enabled}
+      style={{
+        ...label,
+        padding: '9px 14px',
+        background: enabled && accent ? 'rgba(0,255,58,.11)' : color.surface,
+        border: `1px solid ${enabled && accent ? 'rgba(0,255,58,.34)' : color.border}`,
+        borderRadius: radius.sm,
+        color: !enabled ? color.dim : accent ? color.accent : color.muted,
+        cursor: enabled ? 'pointer' : 'default',
+      }}
+    >
+      {text}
+    </button>
   )
 }
 

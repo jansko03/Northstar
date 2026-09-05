@@ -69,8 +69,15 @@ create table signal (
   detail      text,
   occurred_at date not null default current_date,
   handled_at  timestamptz,            -- set when you press DONE in the Pulse column
+  generated   boolean not null default false,  -- made by Admin > Sample data, safe to bulk delete
   created_at  timestamptz default now()
 );
+
+-- Migration: run this against an existing live database (SQL editor).
+-- Marks rows created by the Admin "Populate signals" button so "Clear
+-- generated" can delete them without touching imported signals.
+--
+-- alter table signal add column generated boolean not null default false;
 
 create table note (
   id          uuid primary key default gen_random_uuid(),
