@@ -1,32 +1,48 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { NotificationFeed } from '../components/NotificationFeed'
 import { SignalRow } from '../components/SignalRow'
 import { Section } from '../components/Section'
 import { daysAgo, initials } from '../lib/format'
 import { supabase, DEFAULT_USER_ID } from '../lib/supabase'
 import { cardShadow, color, font, kindLabel, label, radius, surfaceGradient } from '../lib/tokens'
+import { useContactsWithScore } from '../lib/useContactsWithScore'
 import { useIsMobile } from '../lib/useIsMobile'
+import { useSimulatedNotifications } from '../lib/useSimulatedNotifications'
 import type { SignalKind, SignalWithContact } from '../lib/types'
 
 // Fallback used only until app_user has loaded — matches the schema
 // default for pulse_actionable_kinds.
 const DEFAULT_ACTIONABLE_KINDS: SignalKind[] = ['job_change', 'funding', 'post_intent']
 
+// Module-level so the identity stays stable across renders — the notification
+// simulation restarts whenever these arrays change.
+const NO_KINDS: SignalKind[] = []
+const NO_CONTACT_IDS: string[] = []
+
 export function Pulse() {
   const [openSignals, setOpenSignals] = useState<SignalWithContact[]>([])
   const [weekSignals, setWeekSignals] = useState<SignalWithContact[]>([])
   const [actionableKinds, setActionableKinds] = useState<SignalKind[]>(DEFAULT_ACTIONABLE_KINDS)
+  const [notifyKinds, setNotifyKinds] = useState<SignalKind[]>(NO_KINDS)
+  const [notifyContactIds, setNotifyContactIds] = useState<string[]>(NO_CONTACT_IDS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const isMobile = useIsMobile()
+  const { contacts, loading: contactsLoading } = useContactsWithScore()
+  const notifications = useSimulatedNotifications(contacts, notifyKinds, notifyContactIds)
 
   async function load() {
     const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
 
     const [userRes, weekRes] = await Promise.all([
-      supabase.from('app_user').select('pulse_actionable_kinds').eq('id', DEFAULT_USER_ID).maybeSingle(),
+      supabase
+        .from('app_user')
+        .select('pulse_actionable_kinds, notify_kinds, notify_contact_ids')
+        .eq('id', DEFAULT_USER_ID)
+        .maybeSingle(),
       supabase
         .from('signal')
         .select('id, contact_id, kind, detail, occurred_at, handled_at, created_at, contact!inner(id, name, company, stage, user_id)')
@@ -37,6 +53,8 @@ export function Pulse() {
 
     const kinds = userRes.data ? (userRes.data.pulse_actionable_kinds as SignalKind[]) : DEFAULT_ACTIONABLE_KINDS
     setActionableKinds(kinds)
+    setNotifyKinds(userRes.data ? ((userRes.data.notify_kinds ?? []) as SignalKind[]) : NO_KINDS)
+    setNotifyContactIds(userRes.data ? ((userRes.data.notify_contact_ids ?? []) as string[]) : NO_CONTACT_IDS)
 
     const openRes =
       kinds.length > 0
@@ -114,6 +132,13 @@ export function Pulse() {
       {actionError && (
         <span style={{ ...label, color: color.warn }}>{actionError}</span>
       )}
+      <NotificationFeed
+        notifications={notifications.notifications}
+        unreadCount={notifications.unreadCount}
+        configured={notifications.configured}
+        loading={contactsLoading}
+        onClear={notifications.markAllRead}
+      />
       <div
         style={{
           display: 'grid',

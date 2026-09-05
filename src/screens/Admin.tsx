@@ -4,17 +4,16 @@ import { DEFAULT_USER_ID, supabase } from '../lib/supabase'
 import { useContactsWithScore } from '../lib/useContactsWithScore'
 import { color, font, kindLabel, label, radius } from '../lib/tokens'
 import { useIsMobile } from '../lib/useIsMobile'
+import { pushNotifications } from '../lib/notificationStore'
+import {
+  ALL_KINDS,
+  PHRASES,
+  buildPools,
+  generateNotifications,
+  hourStartOf,
+  poolsConfigured,
+} from '../lib/useSimulatedNotifications'
 import type { ContactWithScore, SignalKind } from '../lib/types'
-
-const ALL_KINDS: SignalKind[] = ['reaction', 'comment', 'job_change', 'funding', 'post_intent']
-
-const PHRASES: Record<SignalKind, string[]> = {
-  reaction: ['Liked your post about pricing strategy', 'Reacted to your product update'],
-  comment: ['Commented on your roadmap post', 'Left a comment asking about your services'],
-  job_change: ['Changed jobs to a new company', 'Started a new role'],
-  funding: ['Announced a new funding round', 'Their company raised a Series A'],
-  post_intent: ['Asked the network for recommendations', 'Posted looking for a consultant'],
-}
 
 const inputStyle = {
   background: color.surface,
@@ -192,6 +191,7 @@ export function Admin() {
         </Section>
 
         <Section title="Simulated notifications">
+          <PopulateButton contacts={contacts} notifyKinds={notifyKinds} notifyContactIds={notifyContactIds} />
           <SimulatedFeed notifyKinds={notifyKinds} watchlist={watchlist} contacts={contacts} />
         </Section>
       </div>
@@ -278,6 +278,56 @@ function ContactChip({ name, onRemove }: { name: string; onRemove: () => void })
         ×
       </button>
     </span>
+  )
+}
+
+// How many notifications one press of "Populate Pulse" adds.
+const POPULATE_COUNT = 3
+
+function PopulateButton({
+  contacts,
+  notifyKinds,
+  notifyContactIds,
+}: {
+  contacts: ContactWithScore[]
+  notifyKinds: SignalKind[]
+  notifyContactIds: string[]
+}) {
+  const pools = useMemo(
+    () => buildPools(contacts, notifyKinds, notifyContactIds),
+    [contacts, notifyKinds, notifyContactIds],
+  )
+  const enabled = poolsConfigured(pools)
+
+  function populate() {
+    const now = Date.now()
+    pushNotifications(hourStartOf(now), generateNotifications(pools, POPULATE_COUNT, now))
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+      <button
+        type="button"
+        onClick={populate}
+        disabled={!enabled}
+        style={{
+          ...label,
+          padding: '9px 14px',
+          background: enabled ? 'rgba(0,255,58,.11)' : color.surface,
+          border: `1px solid ${enabled ? 'rgba(0,255,58,.34)' : color.border}`,
+          borderRadius: radius.sm,
+          color: enabled ? color.accent : color.dim,
+          cursor: enabled ? 'pointer' : 'default',
+        }}
+      >
+        Populate Pulse
+      </button>
+      <span style={{ fontSize: 12, color: color.dim, lineHeight: 1.5 }}>
+        {enabled
+          ? `Adds ${POPULATE_COUNT} notifications to the Pulse feed. Clears on the hour.`
+          : 'Pick a signal kind or watch someone first.'}
+      </span>
+    </div>
   )
 }
 

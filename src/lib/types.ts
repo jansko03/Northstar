@@ -77,3 +77,16 @@ export interface ContactWithScore extends Contact {
 export interface SignalWithContact extends Signal {
   contact: Pick<Contact, 'id' | 'name' | 'company' | 'stage'>
 }
+
+// A client-side simulated notification. Never persisted to Supabase — it
+// lives in localStorage via notificationStore.ts.
+export interface SimNotification {
+  id: string
+  contactId: string
+  contactName: string
+  company: string | null
+  kind: SignalKind
+  detail: string
+  at: number
+  unread: boolean
+}
